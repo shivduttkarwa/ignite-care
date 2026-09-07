@@ -1,0 +1,147 @@
+{
+  "key": "daily_care",
+  "version": "v02",
+  "title": "Daily Care Needs Record",
+  "short_title": "Daily Care Needs",
+  "badge": "DCN",
+  "footer_note": "Please add anything that needs to be followed up to the handover notes/diary or Caremaster to ensure it is completed.",
+  "sections": [
+    {
+      "key": "personal_care",
+      "title": "Personal Care",
+      "pdf_layout": "inline",
+      "fields": [
+        {
+          "key": "shower",
+          "type": "yesno",
+          "label": "Shower?",
+          "promote": "shower",
+          "reportable": true
+        },
+        {
+          "key": "bed_bath",
+          "type": "yesno",
+          "label": "Bed Bath?",
+          "promote": "bed_bath",
+          "reportable": true
+        },
+        {
+          "key": "no_wash_reason",
+          "type": "textarea",
+          "label": "If neither, why?",
+          "placeholder": "Why was neither a shower nor a bed bath given?",
+          "show_if": {
+            "all": [
+              { "field": "shower", "eq": false },
+              { "field": "bed_bath", "eq": false }
+            ]
+          },
+          "required_when_shown": true
+        },
+        {
+          "key": "physio",
+          "type": "yesno",
+          "label": "Physio completed and documented in physio diary?",
+          "promote": "physio_completed",
+          "reportable": true
+        }
+      ]
+    },
+    {
+      "key": "food_and_fluid",
+      "title": "Food and Fluid",
+      "pdf_layout": "table",
+      "fields": [
+        { "key": "breakfast", "type": "textarea", "label": "Breakfast", "placeholder": "What was eaten at breakfast?" },
+        { "key": "lunch", "type": "textarea", "label": "Lunch", "placeholder": "What was eaten at lunch?" },
+        { "key": "dinner", "type": "textarea", "label": "Dinner", "placeholder": "What was eaten at dinner?" },
+        { "key": "snacks", "type": "textarea", "label": "Snacks", "placeholder": "What snacks were eaten?" },
+        {
+          "key": "fluids",
+          "type": "textarea",
+          "label": "Fluids",
+          "placeholder": "How much and what fluids?",
+          "required": true,
+          "error": "Fluids must be recorded every shift",
+          "promote": "fluids_recorded",
+          "reportable": true
+        },
+        {
+          "key": "other_food",
+          "type": "textarea",
+          "label": "Anything else",
+          "placeholder": "Anything else about food or drink",
+          "help": "For example refusals, new likes or dislikes, choking risks noticed."
+        }
+      ]
+    },
+    {
+      "key": "bowel_and_urine",
+      "title": "Bowel (note texture) and Urine",
+      "pdf_layout": "table",
+      "fields": [
+        {
+          "key": "bowel",
+          "type": "textarea",
+          "label": "Bowel",
+          "placeholder": "Note times and texture",
+          "promote": "bowel_recorded",
+          "reportable": true
+        },
+        {
+          "key": "urine",
+          "type": "textarea",
+          "label": "Urine",
+          "placeholder": "Note anything unusual",
+          "promote": "urine_recorded",
+          "reportable": true
+        }
+      ]
+    },
+    {
+      "key": "overnight",
+      "title": "Overnight",
+      "pdf_layout": "overnight",
+      "fields": [
+        {
+          "key": "sleep_from",
+          "type": "time",
+          "label": "What times did he/she sleep?",
+          "group": "sleep",
+          "group_label": "Slept"
+        },
+        {
+          "key": "sleep_to",
+          "type": "time",
+          "label": "to",
+          "group": "sleep"
+        },
+        {
+          "key": "awake_notes",
+          "type": "textarea",
+          "label": "Was he/she awake ie watching TV?",
+          "placeholder": "What were they doing, and did they settle?"
+        },
+        {
+          "key": "attendances",
+          "type": "repeater",
+          "label": "From 10pm to 6am, when did you need to attend to {participant}?",
+          "help": "Times, purpose and for how long.",
+          "add_label": "Add attendance",
+          "columns": [
+            { "key": "time", "type": "time", "label": "Time", "placeholder": "11:40pm" },
+            { "key": "purpose", "type": "text", "label": "Purpose", "placeholder": "Toilet assist" },
+            { "key": "duration_minutes", "type": "number", "label": "Duration", "suffix": "min", "min": 1, "max": 480 }
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": [
+    { "field": "shower", "template": "Shower: {value}", "when": true },
+    { "field": "bed_bath", "template": "Bed bath: {value}", "when": true },
+    { "field": "bowel", "template": "Bowel recorded", "when": "filled" },
+    { "field": "urine", "template": "Urine recorded", "when": "filled" },
+    { "field": "physio", "template": "Physio: {value}", "when": true }
+  ]
+}

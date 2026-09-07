@@ -1,0 +1,40 @@
+{% load care %}
+<div class="c-overlay" onclick="document.getElementById('drawer').innerHTML = ''"></div>
+<aside class="c-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+  <header class="c-drawer__head">
+    <div>
+      <h2 class="c-drawer__title" id="drawer-title">
+        {{ participant.full_name }} · {{ record.service_date|date:"D j M" }}
+      </h2>
+      <p class="c-drawer__meta">
+        {{ record.get_shift_display }} ·
+        {{ record.submitted_by.staff_profile.short_name|default:record.created_by.get_full_name }}
+        {% if record.submitted_at %}· submitted {{ record.submitted_at|clock }}{% endif %}
+      </p>
+    </div>
+    <button type="button" class="c-drawer__close" aria-label="Close"
+            onclick="document.getElementById('drawer').innerHTML = ''">
+      <svg aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </header>
+
+  <div class="c-drawer__body">
+    {% if record.status == 'not_required' %}
+      <div class="c-callout">
+        <svg aria-hidden="true"><use href="#i-alert-circle"></use></svg>
+        <span><strong>Marked not required.</strong> {{ record.not_required_reason }}</span>
+      </div>
+    {% else %}
+      {% include "records/_paper.html" with attendances=record.attendances.all %}
+    {% endif %}
+  </div>
+
+  <footer class="c-drawer__foot">
+    {% if record.document %}
+      <a hx-boost="false" download class="c-btn c-btn--primary" href="{% url 'record_pdf' record.pk %}">Download PDF</a>
+    {% else %}
+      <span class="c-btn" aria-disabled="true">No PDF</span>
+    {% endif %}
+    <a class="c-btn" href="{% url 'record_detail' record.pk %}">Open full record</a>
+  </footer>
+</aside>

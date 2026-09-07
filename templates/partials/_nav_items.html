@@ -1,0 +1,60 @@
+{% with view=request.resolver_match.url_name %}
+<div class="c-nav__group">
+  <p class="c-nav__grouplabel">{% if staff_profile.is_manager %}Oversight{% else %}My shift{% endif %}</p>
+  <div class="c-nav__list">
+    <a class="c-nav__link" href="{% url 'dashboard' %}"
+       {% if view == 'dashboard' %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true"><use href="#i-grid"></use></svg>
+      {% if staff_profile.is_manager %}Overview{% else %}Today's shift{% endif %}
+      {% if nav_outstanding %}<span class="c-nav__badge">{{ nav_outstanding }}</span>{% endif %}
+    </a>
+
+    <a class="c-nav__link" href="{% url 'participant_list' %}"
+       {% if view == 'participant_list' or view == 'participant_detail' %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true"><use href="#i-users"></use></svg>
+      Participants
+      {% if nav_participants %}<span class="c-nav__badge c-nav__badge--quiet">{{ nav_participants }}</span>{% endif %}
+    </a>
+
+    <a class="c-nav__link" href="{% url 'notice_list' %}"
+       {% if view == 'notice_list' %}aria-current="page"{% endif %}>
+      <svg aria-hidden="true"><use href="#i-bell"></use></svg>
+      Notices
+      {% if nav_unread %}<span class="c-nav__badge">{{ nav_unread }}</span>{% endif %}
+    </a>
+  </div>
+</div>
+
+{% if staff_profile.is_manager %}
+  <div class="c-nav__group">
+    <p class="c-nav__grouplabel">Records</p>
+    <div class="c-nav__list">
+      <a class="c-nav__link" href="{% url 'record_list' %}"
+         {% if view == 'record_list' %}aria-current="page"{% endif %}>
+        <svg aria-hidden="true"><use href="#i-list"></use></svg>
+        All records
+      </a>
+      <a class="c-nav__link" href="{% url 'record_list' %}?range=7&amp;export=1">
+        <svg aria-hidden="true"><use href="#i-download"></use></svg>
+        Exports
+      </a>
+    </div>
+  </div>
+
+  <div class="c-nav__group">
+    <p class="c-nav__grouplabel">Service</p>
+    <div class="c-nav__list">
+      <a class="c-nav__link" href="{% url 'property_list' %}"
+         {% if view == 'property_list' %}aria-current="page"{% endif %}>
+        <svg aria-hidden="true"><use href="#i-building"></use></svg>
+        Properties
+      </a>
+      <a class="c-nav__link" href="{% url 'worker_list' %}"
+         {% if view == 'worker_list' %}aria-current="page"{% endif %}>
+        <svg aria-hidden="true"><use href="#i-badge"></use></svg>
+        Care workers
+      </a>
+    </div>
+  </div>
+{% endif %}
+{% endwith %}

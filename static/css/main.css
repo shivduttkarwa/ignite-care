@@ -1,0 +1,21 @@
+@layer settings, generic, elements, objects, components, utilities;
+
+@import url("01-settings/_fonts.css") layer(settings);
+@import url("01-settings/_tokens.css") layer(settings);
+@import url("03-generic/_reset.css") layer(generic);
+@import url("04-elements/_base.css") layer(elements);
+@import url("05-objects/_layout.css") layer(objects);
+@import url("06-components/_appframe.css") layer(components);
+@import url("06-components/_appbar.css") layer(components);
+@import url("06-components/_panel.css") layer(components);
+@import url("06-components/_button.css") layer(components);
+@import url("06-components/_pill.css") layer(components);
+@import url("06-components/_card.css") layer(components);
+@import url("06-components/_field.css") layer(components);
+@import url("06-components/_section.css") layer(components);
+@import url("06-components/_admin.css") layer(components);
+@import url("07-utilities/_utils.css") layer(utilities);
+
+@view-transition {
+  navigation: auto;
+}

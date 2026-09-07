@@ -1,0 +1,45 @@
+{% with p=row.participant %}
+<article class="c-participant{% if row.is_done %} c-participant--done{% elif p.shift_alert %} c-participant--flagged{% endif %}">
+  <div class="c-participant__grid">
+    <span class="c-avatar c-participant__avatar" aria-hidden="true">{{ p.initials }}</span>
+
+    <div class="c-participant__id">
+      <h3 class="c-participant__name">
+        <a href="{% url 'participant_detail' p.pk %}" style="color: inherit; text-decoration: none">{{ p.full_name }}</a>
+      </h3>
+      <p class="c-participant__room">
+        {% if p.room %}{{ p.room }}{% endif %}{% if show_home and p.home %} · {{ p.home.label }}{% endif %}
+      </p>
+    </div>
+
+    <div class="c-participant__tags o-cluster">
+      {% for tag in p.tags.all %}
+        <span class="c-tag{% if tag.tone == 'caution' %} c-tag--caution{% endif %}">{{ tag.label }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="c-participant__status">
+      {% include "partials/_status_pill.html" with state=row.state %}
+    </div>
+
+    {% if p.shift_alert %}
+      <p class="c-participant__alert">
+        <svg aria-hidden="true"><use href="#i-bang"></use></svg>
+        <span><span class="u-visually-hidden">Important: </span>{{ p.shift_alert }}</span>
+      </p>
+    {% endif %}
+
+    <div class="c-participant__foot">
+      {% if row.state == 'not_required' %}
+        <a class="c-link-action" href="{% url 'participant_detail' p.pk %}">View reason</a>
+      {% elif row.record and row.record.status == 'submitted' %}
+        <a class="c-link-action" href="{% url 'record_detail' row.record.pk %}">View record</a>
+      {% elif row.record %}
+        <a class="c-link-action" href="{% url 'record_edit' row.record.pk %}">Continue draft</a>
+      {% else %}
+        <a class="c-link-action" href="{% url 'record_new' p.pk %}">Add record</a>
+      {% endif %}
+    </div>
+  </div>
+</article>
+{% endwith %}

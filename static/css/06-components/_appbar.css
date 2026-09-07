@@ -1,0 +1,126 @@
+.c-appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-appbar);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 3.5rem;
+  padding: var(--space-2) var(--page-gutter);
+  padding-top: calc(var(--space-2) + env(safe-area-inset-top));
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.c-appbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.c-appbar__mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+}
+
+.c-appbar__title {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.c-appbar__end {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.c-appbar__back {
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  margin-inline-start: calc(var(--space-2) * -1);
+  color: var(--color-primary);
+  border-radius: var(--radius-md);
+}
+
+.c-appbar__back svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Home switcher --------------------------------------------------------- */
+.c-homes {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--page-gutter) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+}
+
+.c-homes::-webkit-scrollbar {
+  display: none;
+}
+
+.c-home {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex: none;
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-4);
+  scroll-snap-align: start;
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.c-home:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.c-home[aria-current="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.c-home__count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* The date / shift / worker line under the switcher --------------------- */
+.c-shiftline {
+  padding: var(--space-3) var(--page-gutter);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.c-shiftline strong {
+  color: var(--color-text);
+  font-weight: 600;
+}

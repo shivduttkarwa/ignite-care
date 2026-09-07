@@ -1,0 +1,318 @@
+.c-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.c-field__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-soft);
+  line-height: var(--leading-snug);
+}
+
+.c-field__help {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.c-field__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.c-field__error svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+}
+
+.c-field--invalid .c-field__label {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.c-input,
+.c-textarea,
+.c-select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.c-textarea {
+  min-height: 4.5rem;
+  field-sizing: content;
+}
+
+.c-input:hover,
+.c-textarea:hover,
+.c-select:hover {
+  border-color: var(--color-text-faint);
+}
+
+.c-input:focus-visible,
+.c-textarea:focus-visible,
+.c-select:focus-visible {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: var(--focus-halo);
+}
+
+.c-field--invalid .c-input:focus-visible,
+.c-field--invalid .c-textarea:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.c-field--invalid .c-input,
+.c-field--invalid .c-textarea {
+  border-color: var(--color-accent);
+}
+
+.c-input--time {
+  min-width: 7rem;
+}
+
+.c-select {
+  appearance: none;
+  padding-inline-end: var(--space-8);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235d5d60'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5' stroke='%235d5d60' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 1.25rem;
+}
+
+/* Yes / No segmented control. Plain radios, so it works without JS ------- */
+.c-yesno {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.c-yesno__option {
+  position: relative;
+  display: flex;
+}
+
+.c-yesno__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.c-yesno__face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.c-yesno__face svg {
+  width: 1rem;
+  height: 1rem;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.c-yesno__option:hover .c-yesno__face {
+  border-color: var(--color-text-faint);
+}
+
+.c-yesno__input:checked + .c-yesno__face {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.c-yesno__input:checked + .c-yesno__face svg {
+  opacity: 1;
+}
+
+.c-yesno__input:focus-visible + .c-yesno__face {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Multi-select tile ------------------------------------------------------ */
+.c-tile {
+  position: relative;
+  display: flex;
+}
+
+.c-tile__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.c-tile__face {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.c-tile__box {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+}
+
+.c-tile__box svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--color-on-primary);
+  opacity: 0;
+}
+
+.c-tile__input:checked + .c-tile__face {
+  background: var(--color-primary-tint);
+  border-color: var(--color-primary);
+}
+
+.c-tile__input:checked + .c-tile__face .c-tile__box {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.c-tile__input:checked + .c-tile__face .c-tile__box svg {
+  opacity: 1;
+}
+
+.c-tile__input:focus-visible + .c-tile__face {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Time range pair -------------------------------------------------------- */
+.c-timerange {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.c-timerange__sep {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* Repeater --------------------------------------------------------------- */
+.c-repeater {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.c-repeater__row {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(0, 6rem) var(--tap);
+  gap: var(--space-2);
+  align-items: center;
+}
+
+@container (max-width: 26rem) {
+  .c-repeater__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--tap);
+    grid-template-areas:
+      "time duration remove"
+      "purpose purpose purpose";
+  }
+
+  .c-repeater__row > :nth-child(1) {
+    grid-area: time;
+  }
+
+  .c-repeater__row > :nth-child(2) {
+    grid-area: purpose;
+  }
+
+  .c-repeater__row > :nth-child(3) {
+    grid-area: duration;
+  }
+
+  .c-repeater__row > :nth-child(4) {
+    grid-area: remove;
+  }
+}
+
+.c-repeater__remove {
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-md);
+}
+
+.c-repeater__remove:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.c-repeater__remove svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.c-repeater__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.c-repeater__add:hover {
+  background: var(--color-primary-tint);
+  border-color: var(--color-primary);
+}

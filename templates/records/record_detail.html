@@ -1,0 +1,63 @@
+{% extends "layouts/app.html" %}
+{% load care %}
+
+{% block title %}{{ participant.full_name }} · {{ record.service_date|date:"j M Y" }}{% endblock %}
+
+{% block topbar %}
+  <a class="c-top__back" href="{% url 'participant_detail' participant.pk %}" aria-label="Back to participant">
+    <svg aria-hidden="true"><use href="#i-chevron-left"></use></svg>
+  </a>
+  <span class="c-top__title">Care record</span>
+{% endblock %}
+
+{% block page_class %}c-page--narrow{% endblock %}
+
+{% block page %}
+  <section class="o-stack">
+    <div>
+      <h1>{{ participant.full_name }} · {{ record.service_date|date:"D j M Y" }}</h1>
+      <p class="u-small u-muted">
+        {{ shift_label }} ·
+        {{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }}
+        {% if record.submitted_at %}· submitted {{ record.submitted_at|clock }}{% endif %}
+        · {{ record.reference }}
+      </p>
+    </div>
+
+    <div class="o-cluster">
+      {% include "partials/_status_pill.html" with state=record.status %}
+      <span class="c-formbadge c-formbadge--full">{{ schema.short_title }}</span>
+    </div>
+
+    {% if record.status == 'not_required' %}
+      <div class="c-callout">
+        <svg aria-hidden="true"><use href="#i-alert-circle"></use></svg>
+        <span><strong>Marked not required.</strong> {{ record.not_required_reason }}</span>
+      </div>
+    {% else %}
+      {% if record.is_locked %}
+        <div class="c-callout c-callout--positive">
+          <svg aria-hidden="true"><use href="#i-check"></use></svg>
+          <span>This record is locked. Corrections are added as an amendment, never edited in place.</span>
+        </div>
+      {% endif %}
+
+      <div class="c-card">
+        <div class="c-card__body">
+          {% include "records/_paper.html" %}
+        </div>
+      </div>
+
+      {% if record.document %}
+        <a hx-boost="false" download class="c-btn c-btn--block" href="{% url 'record_pdf' record.pk %}">
+          <svg class="c-btn__icon" aria-hidden="true"><use href="#i-download"></use></svg>
+          Download PDF
+        </a>
+      {% endif %}
+    {% endif %}
+
+    <a class="c-btn c-btn--block c-btn--primary" href="{% url 'participant_detail' participant.pk %}">
+      Back to {{ participant.first_name }}'s records
+    </a>
+  </section>
+{% endblock %}

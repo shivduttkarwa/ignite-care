@@ -1,0 +1,21 @@
+{% if state == 'submitted' %}
+  <span class="c-pill c-pill--complete">
+    <svg class="c-pill__icon" aria-hidden="true"><use href="#i-check"></use></svg>Complete
+  </span>
+{% elif state == 'draft' %}
+  <span class="c-pill c-pill--draft">
+    <svg class="c-pill__icon" aria-hidden="true"><use href="#i-clock"></use></svg>Draft
+  </span>
+{% elif state == 'not_required' %}
+  <span class="c-pill c-pill--none">
+    <svg class="c-pill__icon" aria-hidden="true"><use href="#i-minus"></use></svg>Not required
+  </span>
+{% elif state == 'void' %}
+  <span class="c-pill c-pill--void">
+    <svg class="c-pill__icon" aria-hidden="true"><use href="#i-x"></use></svg>Void
+  </span>
+{% else %}
+  <span class="c-pill c-pill--pending">
+    <svg class="c-pill__icon" aria-hidden="true"><use href="#i-circle"></use></svg>Not started
+  </span>
+{% endif %}

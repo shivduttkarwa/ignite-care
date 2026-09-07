@@ -1,0 +1,64 @@
+{% load care %}
+{% with value=record.answers|get:field.key error=errors|get:field.key %}
+<div class="c-field{% if error %} c-field--invalid{% endif %}"
+     {% if field.show_if %}x-show="visible('{{ field.key }}')" x-cloak{% endif %}>
+
+  {% if field.type == "yesno" %}
+    <fieldset>
+      <legend class="c-field__label">{{ field.label }}{% if field.required %} <span aria-hidden="true">*</span>{% endif %}</legend>
+      <div class="c-yesno">
+        <div class="c-yesno__option">
+          <input class="c-yesno__input" type="radio" id="{{ field.key }}_yes" name="{{ field.key }}"
+                 value="true" x-model="answers['{{ field.key }}']"
+                 {% if value is True %}checked{% endif %}
+                 {% if error %}aria-describedby="{{ field.key }}_error"{% endif %}>
+          <label class="c-yesno__face" for="{{ field.key }}_yes">
+            <svg aria-hidden="true"><use href="#i-check"></use></svg>Yes
+          </label>
+        </div>
+        <div class="c-yesno__option">
+          <input class="c-yesno__input" type="radio" id="{{ field.key }}_no" name="{{ field.key }}"
+                 value="false" x-model="answers['{{ field.key }}']"
+                 {% if value is False %}checked{% endif %}>
+          <label class="c-yesno__face" for="{{ field.key }}_no">
+            <svg aria-hidden="true"><use href="#i-check"></use></svg>No
+          </label>
+        </div>
+      </div>
+    </fieldset>
+
+  {% elif field.type == "textarea" %}
+    <label class="c-field__label" for="f_{{ field.key }}">
+      {{ field.label }}{% if field.required %} <span aria-hidden="true">*</span>{% endif %}
+    </label>
+    <textarea class="c-textarea" id="f_{{ field.key }}" name="{{ field.key }}"
+              rows="2" placeholder="{{ field.placeholder|default:'' }}"
+              x-model="answers['{{ field.key }}']"
+              {% if error %}aria-invalid="true" aria-describedby="{{ field.key }}_error"{% endif %}>{{ value|default_if_none:"" }}</textarea>
+
+  {% elif field.type == "time" %}
+    <label class="c-field__label" for="f_{{ field.key }}">{{ field.label }}</label>
+    <input class="c-input c-input--time" type="time" id="f_{{ field.key }}" name="{{ field.key }}"
+           value="{{ value|default_if_none:'' }}" x-model="answers['{{ field.key }}']">
+
+  {% elif field.type == "text" %}
+    <label class="c-field__label" for="f_{{ field.key }}">{{ field.label }}</label>
+    <input class="c-input" type="text" id="f_{{ field.key }}" name="{{ field.key }}"
+           value="{{ value|default_if_none:'' }}" placeholder="{{ field.placeholder|default:'' }}"
+           x-model="answers['{{ field.key }}']">
+
+  {% elif field.type == "number" %}
+    <label class="c-field__label" for="f_{{ field.key }}">{{ field.label }}</label>
+    <input class="c-input" type="number" inputmode="numeric" id="f_{{ field.key }}" name="{{ field.key }}"
+           value="{{ value|default_if_none:'' }}" x-model="answers['{{ field.key }}']">
+  {% endif %}
+
+  {% if field.help %}<p class="c-field__help">{{ field.help }}</p>{% endif %}
+
+  {% if error %}
+    <p class="c-field__error" id="{{ field.key }}_error" role="alert">
+      <svg aria-hidden="true"><use href="#i-alert-circle"></use></svg>{{ error }}
+    </p>
+  {% endif %}
+</div>
+{% endwith %}

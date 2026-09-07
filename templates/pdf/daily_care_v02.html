@@ -1,0 +1,168 @@
+{% load care %}<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<title>{{ record.reference }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm;
+
+    @bottom-left {
+      content: "{{ organisation_name }} · {{ record.reference }} · Submitted by {{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }} · {{ record.submitted_at|date:"j M Y" }} {{ record.submitted_at|clock }}";
+      font-family: Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #444;
+    }
+
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #444;
+    }
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.35;
+    color: #000;
+    margin: 0;
+  }
+
+  .brand { display: flex; align-items: center; gap: 6pt; margin-bottom: 10pt; }
+  .brand svg { width: 20pt; height: 20pt; color: #b12655; }
+  .brand-name { font-size: 12pt; font-weight: bold; line-height: 1; }
+  .brand-sub { font-size: 7.5pt; color: #444; letter-spacing: .04em; }
+
+  h1 {
+    font-size: 13pt;
+    margin: 0 0 8pt;
+    padding-bottom: 3pt;
+    border-bottom: 1.2pt solid #115e74;
+    text-decoration: underline;
+  }
+
+  h2 { font-size: 10.5pt; margin: 11pt 0 4pt; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6pt; }
+  th, td { border: .6pt solid #000; padding: 3.5pt 5pt; text-align: left; vertical-align: top; }
+  th { width: 34%; font-weight: bold; }
+  td.label { width: 22%; font-weight: bold; }
+
+  .lines p { margin: 0 0 2.5pt; }
+
+  .box {
+    display: inline-block;
+    min-width: 22pt;
+    padding: 0 4pt;
+    border: .8pt solid #000;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .off { color: #888; }
+  .not-recorded { color: #777; font-style: italic; }
+
+  .overnight { border: .6pt solid #000; padding: 5pt; margin-bottom: 6pt; }
+  .overnight p { margin: 0 0 2pt; }
+
+  .footnote { margin-top: 10pt; font-weight: bold; font-size: 10pt; }
+
+  .amendment {
+    margin-top: 10pt;
+    border: .8pt solid #b12655;
+    padding: 5pt;
+    font-size: 9.5pt;
+  }
+
+  .amendment h3 { margin: 0 0 3pt; font-size: 9.5pt; color: #b12655; }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2.7c.9 2.6 2.6 3.8 4 5.5a7.5 7.5 0 0 1 1.8 4.9A5.8 5.8 0 0 1 12 19a5.8 5.8 0 0 1-5.8-5.9c0-1.7.6-3.2 1.6-4.5.4 1 1.1 1.7 2 2 .1-3.2 1-6 2.2-7.9Z"/>
+    <path d="M12 19c-1.5 0-2.6-1.1-2.6-2.5 0-1.6 1.4-2.3 2.6-4 1.2 1.7 2.6 2.4 2.6 4 0 1.4-1.1 2.5-2.6 2.5Z"/>
+  </svg>
+  <div>
+    <div class="brand-name">Ignite</div>
+    <div class="brand-sub">Community Services</div>
+  </div>
+</div>
+
+<h1>{{ schema.title }}</h1>
+
+<table>
+  <tr><th>Participant</th><td>{{ participant.full_name }}</td></tr>
+  <tr><th>Date</th><td>{{ record.service_date|date:"l j F Y" }}</td></tr>
+  <tr><th>Name of staff on shift</th><td>{{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }} ({{ record.get_shift_display }})</td></tr>
+</table>
+
+<h2>Personal Care</h2>
+<div class="lines">
+  <p>Shower? {% yesno_boxes record "shower" %}</p>
+  <p>Bed Bath? {% yesno_boxes record "bed_bath" %}</p>
+  <p>If neither, why? {% answer record "no_wash_reason" %}</p>
+  <p>Physio completed and documented in physio diary? {% yesno_boxes record "physio" %}</p>
+</div>
+
+<h2>Food and Fluid</h2>
+<table>
+  <tr><td class="label">Breakfast</td><td>{% answer record "breakfast" %}</td></tr>
+  <tr><td class="label">Lunch</td><td>{% answer record "lunch" %}</td></tr>
+  <tr><td class="label">Dinner</td><td>{% answer record "dinner" %}</td></tr>
+  <tr><td class="label">Snacks</td><td>{% answer record "snacks" %}</td></tr>
+  <tr><td class="label">Fluids</td><td>{% answer record "fluids" %}</td></tr>
+  <tr><td class="label">Anything else</td><td>{% answer record "other_food" %}</td></tr>
+</table>
+
+<h2>Bowel (note texture) and Urine</h2>
+<table>
+  <tr><td class="label">Bowel</td><td>{% answer record "bowel" %}</td></tr>
+  <tr><td class="label">Urine</td><td>{% answer record "urine" %}</td></tr>
+</table>
+
+<h2>Overnight</h2>
+<div class="overnight">
+  <p><strong>Slept:</strong>
+    {% if record.answers.sleep_from or record.answers.sleep_to %}
+      {{ record.answers.sleep_from|default:"—" }} to {{ record.answers.sleep_to|default:"—" }}
+    {% else %}<span class="not-recorded">Not recorded</span>{% endif %}
+  </p>
+  <p><strong>Awake:</strong> {% answer record "awake_notes" %}</p>
+</div>
+
+{% if attendances %}
+  <table>
+    <thead>
+      <tr><th style="width:18%">Time</th><th style="width:62%; font-weight:bold">Purpose</th><th style="width:20%">Duration</th></tr>
+    </thead>
+    <tbody>
+      {% for row in attendances %}
+        <tr>
+          <td>{{ row.time|clock }}</td>
+          <td>{{ row.purpose }}</td>
+          <td>{{ row.duration_minutes }} min</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="not-recorded">No attendances recorded between 10pm and 6am.</p>
+{% endif %}
+
+<p class="footnote">{{ schema.footer_note }}</p>
+
+{% for amendment in record.amendments.all %}
+  <div class="amendment">
+    <h3>Amendment · {{ amendment.created_at|date:"j M Y" }} {{ amendment.created_at|clock }} · {{ amendment.author.get_full_name }}</h3>
+    <p><strong>Reason:</strong> {{ amendment.reason }}</p>
+    <p>{{ amendment.body }}</p>
+  </div>
+{% endfor %}
+
+</body>
+</html>

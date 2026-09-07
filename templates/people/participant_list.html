@@ -1,0 +1,60 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Participants · {{ organisation_name }}{% endblock %}
+{% block topbar_title %}Participants{% endblock %}
+
+{% block page %}
+  <div class="c-pagehead">
+    <div>
+      <h1 class="c-pagehead__title">Participants</h1>
+      <p class="c-pagehead__sub">
+        {{ count }} active participant{{ count|pluralize }} · status shown for the {{ shift_label|lower }}
+      </p>
+    </div>
+  </div>
+
+  <form method="get" class="o-cluster" style="--cluster-gap: var(--space-2)">
+    <label class="u-visually-hidden" for="q">Search participants</label>
+    <input class="c-input" type="search" name="q" id="q" value="{{ query }}"
+           placeholder="Search by name or room" style="max-width: 20rem">
+    {% if homes|length > 1 %}
+      <label class="u-visually-hidden" for="home">Property</label>
+      <select class="c-select" name="home" id="home" onchange="this.form.submit()" style="width: auto">
+        <option value="">All properties</option>
+        {% for home in homes %}
+          <option value="{{ home.pk }}" {% if home_filter == home.pk|stringformat:"s" %}selected{% endif %}>{{ home.label }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+    <button type="submit" class="c-btn">
+      <svg class="c-btn__icon" aria-hidden="true"><use href="#i-search"></use></svg>Search
+    </button>
+    {% if query or home_filter %}
+      <a class="c-link-action c-link-action--muted" href="{% url 'participant_list' %}">Clear</a>
+    {% endif %}
+  </form>
+
+  {% for group in groups %}
+    <section class="o-stack">
+      <div class="c-blockhead">
+        <h2 class="c-blockhead__title">{{ group.home.label }}</h2>
+        <p class="c-blockhead__meta">{{ group.rows|length }} participant{{ group.rows|length|pluralize }}</p>
+      </div>
+
+      {% for row in group.rows %}
+        {% include "partials/_participant_row.html" with row=row %}
+      {% endfor %}
+    </section>
+  {% empty %}
+    <div class="c-panel">
+      <div class="c-empty">
+        <svg class="c-empty__icon" aria-hidden="true"><use href="#i-users"></use></svg>
+        <p class="c-empty__title">No participants found</p>
+        <p class="c-empty__body">
+          {% if query %}Nothing matches &ldquo;{{ query }}&rdquo;. Try a different name or room.
+          {% else %}No participants have been added to your homes yet.{% endif %}
+        </p>
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}

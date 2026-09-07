@@ -1,0 +1,62 @@
+{% load care %}
+<div class="c-paper">
+  <p class="c-eyebrow">{{ schema.title }}</p>
+
+  <table>
+    <tr><th>Participant</th><td>{{ participant.full_name }}</td></tr>
+    <tr><th>Date</th><td>{{ record.service_date|date:"l j F Y" }}</td></tr>
+    <tr><th>Name of staff on shift</th><td>{{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }}</td></tr>
+  </table>
+
+  <h4>Personal Care</h4>
+  <p>Shower? {% yesno_boxes record "shower" %}</p>
+  <p>Bed Bath? {% yesno_boxes record "bed_bath" %}</p>
+  {% if record.answers.no_wash_reason %}<p>If neither, why? {% answer record "no_wash_reason" %}</p>{% endif %}
+  <p>Physio completed and documented in physio diary? {% yesno_boxes record "physio" %}</p>
+
+  <h4>Food and Fluid</h4>
+  <table>
+    <tr><th>Breakfast</th><td>{% answer record "breakfast" %}</td></tr>
+    <tr><th>Lunch</th><td>{% answer record "lunch" %}</td></tr>
+    <tr><th>Dinner</th><td>{% answer record "dinner" %}</td></tr>
+    <tr><th>Snacks</th><td>{% answer record "snacks" %}</td></tr>
+    <tr><th>Fluids</th><td>{% answer record "fluids" %}</td></tr>
+    <tr><th>Anything else</th><td>{% answer record "other_food" %}</td></tr>
+  </table>
+
+  <h4>Bowel (note texture) and Urine</h4>
+  <table>
+    <tr><th>Bowel</th><td>{% answer record "bowel" %}</td></tr>
+    <tr><th>Urine</th><td>{% answer record "urine" %}</td></tr>
+  </table>
+
+  <h4>Overnight</h4>
+  <table>
+    <tr>
+      <th>Slept</th>
+      <td>
+        {% if record.answers.sleep_from or record.answers.sleep_to %}
+          {{ record.answers.sleep_from|default:"—" }} to {{ record.answers.sleep_to|default:"—" }}
+        {% else %}<span class="c-paper__off">Not recorded</span>{% endif %}
+      </td>
+    </tr>
+    <tr><th>Awake</th><td>{% answer record "awake_notes" %}</td></tr>
+  </table>
+
+  {% if attendances %}
+    <table>
+      <thead>
+        <tr><th style="width:22%">Time</th><th style="width:56%">Purpose</th><th style="width:22%">Duration</th></tr>
+      </thead>
+      <tbody>
+        {% for row in attendances %}
+          <tr>
+            <td>{{ row.time|clock }}</td>
+            <td>{{ row.purpose }}</td>
+            <td>{{ row.duration_minutes }} min</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>

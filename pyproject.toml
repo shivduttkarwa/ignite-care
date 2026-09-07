@@ -1,0 +1,47 @@
+[project]
+name = "ignite-care"
+version = "0.1.0"
+description = "Ignite Community Services support worker portal"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "django>=5.2,<6.0",
+    "django-environ>=0.12",
+    "django-filter>=25.1",
+    "django-simple-history>=3.10",
+    "django-otp>=1.6",
+    "django-axes>=8.0",
+    "qrcode>=8.2",
+    "argon2-cffi>=25.1",
+    "weasyprint>=66",
+    "pypdf>=6.0",
+    "openpyxl>=3.1",
+    "whitenoise>=6.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "pytest-django>=4.11",
+    "ruff>=0.14",
+    "freezegun>=1.5",
+]
+prod = [
+    "psycopg[binary]>=3.2",
+    "gunicorn>=23.0",
+    "django-q2>=1.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.local"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+addopts = "-q"

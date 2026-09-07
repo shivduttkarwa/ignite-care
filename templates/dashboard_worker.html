@@ -1,0 +1,144 @@
+{% extends "layouts/app.html" %}
+{% load care %}
+
+{% block title %}Today's shift · {{ organisation_name }}{% endblock %}
+{% block topbar_title %}Today's shift{% endblock %}
+
+{% block topbar_end %}
+  <a class="c-btn c-btn--sm" href="{% url 'participant_list' %}">
+    <svg class="c-btn__icon" aria-hidden="true"><use href="#i-users"></use></svg>
+    <span class="u-hide-sm">Participants</span>
+  </a>
+{% endblock %}
+
+{% block page %}
+  <div class="c-pagehead">
+    <div>
+      <h1 class="c-pagehead__title">Today's shift</h1>
+      <p class="c-pagehead__sub">
+        {{ today|date:"l j F Y" }} · <strong>{{ shift_label }}</strong>
+        {% if active_home %} · {{ active_home.label }}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {% if home_options|length > 1 %}
+    <nav class="c-homes" aria-label="Choose the home you are working in today">
+      {% for home in home_options %}
+        <a class="c-home" href="{% url 'switch_home' home.obj.pk %}"
+           {% if home.is_active %}aria-current="true"{% endif %}>
+          <span>{{ home.obj.label }}</span>
+          <span class="c-home__count">{{ home.participant_count }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  <div class="c-stats">
+    <div class="c-stat c-stat--positive">
+      <p class="c-stat__label"><svg aria-hidden="true"><use href="#i-check"></use></svg>Complete</p>
+      <p class="c-stat__value">{{ done_count }}<span class="c-stat__unit"> / {{ total_count }}</span></p>
+      <p class="c-stat__note">{{ progress_pct }}% of this shift</p>
+    </div>
+    <div class="c-stat{% if outstanding_count %} c-stat--caution{% endif %}">
+      <p class="c-stat__label"><svg aria-hidden="true"><use href="#i-circle"></use></svg>Still to do</p>
+      <p class="c-stat__value">{{ outstanding_count }}</p>
+      <p class="c-stat__note">{% if outstanding_count %}record{{ outstanding_count|pluralize }} outstanding{% else %}All done, nice work{% endif %}</p>
+    </div>
+    <div class="c-stat c-stat--flame">
+      <p class="c-stat__label"><svg aria-hidden="true"><use href="#i-users"></use></svg>Participants</p>
+      <p class="c-stat__value">{{ total_count }}</p>
+      <p class="c-stat__note">{% if active_home %}in {{ active_home.label }}{% else %}in your homes{% endif %}</p>
+    </div>
+    <div class="c-stat c-stat--accent">
+      <p class="c-stat__label"><svg aria-hidden="true"><use href="#i-bell"></use></svg>Notices</p>
+      <p class="c-stat__value">{{ unread_count }}</p>
+      <p class="c-stat__note">{% if unread_count %}unread for you{% else %}nothing new{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="c-columns">
+    <div class="o-stack">
+      <div class="c-blockhead">
+        <h2 class="c-blockhead__title">Records for this shift</h2>
+        <p class="c-blockhead__meta u-nums">{{ done_count }} of {{ total_count }} complete</p>
+      </div>
+
+      <div class="c-progress" role="progressbar" aria-valuenow="{{ done_count }}"
+           aria-valuemin="0" aria-valuemax="{{ total_count }}" aria-label="Records complete this shift">
+        <div class="c-progress__bar{% if not all_done %} c-progress__bar--partial{% endif %}"
+             style="width: {{ progress_pct }}%"></div>
+      </div>
+
+      {% for row in rows %}
+        {% include "partials/_participant_row.html" with row=row %}
+      {% empty %}
+        <div class="c-panel">
+          <div class="c-empty">
+            <svg class="c-empty__icon" aria-hidden="true"><use href="#i-users"></use></svg>
+            <p class="c-empty__title">No participants here yet</p>
+            <p class="c-empty__body">Once participants are added to
+              {% if active_home %}{{ active_home.label }}{% else %}this home{% endif %},
+              their shift records appear on this screen.</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="c-columns__rail">
+      <section class="c-panel">
+        <div class="c-panel__head">
+          <h2 class="c-panel__title">Handover</h2>
+          <p class="c-panel__meta">{{ handover_label }}, {{ handover_date|date:"j M" }}</p>
+        </div>
+        {% if handover %}
+          <div class="c-plist">
+            {% for record in handover %}
+              <a class="c-plist__item" href="{% url 'record_detail' record.pk %}">
+                <span class="c-avatar c-avatar--sm" aria-hidden="true">{{ record.participant.initials }}</span>
+                <span class="c-plist__main">
+                  <span class="c-plist__title">{{ record.participant.full_name }}</span>
+                  <span class="c-plist__sub">{{ record.summary_parts|join:" · " }}</span>
+                </span>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="c-panel__body">
+            <p class="u-small u-muted">No records were lodged on the {{ handover_label|lower }}.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="c-panel">
+        <div class="c-panel__head">
+          <h2 class="c-panel__title">Notices</h2>
+          {% if unread_count %}
+            <p class="c-panel__meta"><span class="c-pill c-pill--pending">{{ unread_count }} unread</span></p>
+          {% endif %}
+        </div>
+        <div class="c-panel__body">
+          {% for notice in notices|slice:":3" %}
+            <article class="c-notice{% if notice.pk in unread_ids %} c-notice--unread{% endif %}"
+                     style="border: 0; padding: 0 0 0 var(--space-3)">
+              <p class="c-notice__meta">
+                {% if notice.pk in unread_ids %}<span class="c-notice__dot" aria-hidden="true"></span>{% endif %}
+                {{ notice.author.staff_profile.short_name|default:notice.author.username }}
+                · {{ notice.published_at|date:"j M" }}
+              </p>
+              <h3 class="c-notice__title" style="font-size: var(--text-sm)">{{ notice.title }}</h3>
+              <p class="c-notice__body">{{ notice.body }}</p>
+            </article>
+          {% empty %}
+            <p class="u-small u-muted">No notices right now.</p>
+          {% endfor %}
+        </div>
+        {% if notices %}
+          <div class="c-panel__foot">
+            <a class="c-link-action" href="{% url 'notice_list' %}">All notices</a>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

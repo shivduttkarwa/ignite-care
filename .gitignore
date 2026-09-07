@@ -1,0 +1,57 @@
+# Client material -----------------------------------------------------------
+# ref-docs holds Ignite's own care forms, which carry an explicit notice that
+# reproduction and distribution are prohibited, plus commercial correspondence.
+# It is reference material for building the portal, not part of the codebase,
+# and this repository is public. Keep it local.
+/ref-docs/
+
+# Environment ----------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# Python ---------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+build/
+dist/
+
+# Virtual environments -------------------------------------------------------
+.venv/
+venv/
+env/
+
+# Django ---------------------------------------------------------------------
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+# Generated record PDFs and uploads. These are participant data.
+/var/
+
+# Tooling --------------------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.log
+
+# Editors --------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating system -----------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node, if a build step is ever added ----------------------------------------
+node_modules/
