@@ -99,10 +99,22 @@ PARTICIPANTS = [
 ]
 
 BREAKFASTS = ["Weet-Bix and banana, ate well", "Toast and eggs, ate half", "Porridge, ate well"]
-LUNCHES = ["Ham and salad sandwich, half eaten", "Soup and a roll, ate well", "Chicken wrap, ate well"]
-DINNERS = ["Spaghetti bolognese, ate well", "Roast chicken and vegetables", "Fish and salad, ate half"]
+LUNCHES = [
+    "Ham and salad sandwich, half eaten",
+    "Soup and a roll, ate well",
+    "Chicken wrap, ate well",
+]
+DINNERS = [
+    "Spaghetti bolognese, ate well",
+    "Roast chicken and vegetables",
+    "Fish and salad, ate half",
+]
 FLUIDS = ["Approx 400ml water overnight", "1.2L across the shift", "Approx 800ml, water and tea"]
-BOWELS = ["One bowel motion 7:15pm, soft, normal", "No bowel motion this shift", "Two motions, formed"]
+BOWELS = [
+    "One bowel motion 7:15pm, soft, normal",
+    "No bowel motion this shift",
+    "Two motions, formed",
+]
 URINES = ["Passing urine normally, no concerns", "Passing urine, slightly dark", "Normal output"]
 AWAKE = [
     "Awake 2:00 to 2:20am, sat in lounge, no TV, settled back easily",
@@ -153,7 +165,11 @@ class Command(BaseCommand):
         for username, first, last, role in WORKERS:
             user, created = User.objects.get_or_create(
                 username=username,
-                defaults={"first_name": first, "last_name": last, "email": f"{username}@ignite.test"},
+                defaults={
+                    "first_name": first,
+                    "last_name": last,
+                    "email": f"{username}@ignite.test",
+                },
             )
             if created:
                 user.set_password("ignite-demo-2026")
@@ -281,10 +297,16 @@ class Command(BaseCommand):
                         OvernightAttendance.objects.bulk_create(
                             [
                                 OvernightAttendance(
-                                    record=record, time="23:40", purpose="Toilet assist", duration_minutes=10
+                                    record=record,
+                                    time="23:40",
+                                    purpose="Toilet assist",
+                                    duration_minutes=10,
                                 ),
                                 OvernightAttendance(
-                                    record=record, time="02:00", purpose="Found in lounge, resettled", duration_minutes=20
+                                    record=record,
+                                    time="02:00",
+                                    purpose="Found in lounge, resettled",
+                                    duration_minutes=20,
                                 ),
                             ]
                         )

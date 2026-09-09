@@ -1,0 +1,1413 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ignite Portal Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --ink:        #0e2129;
+    --ink-2:      #3d545d;
+    --ink-3:      #6c848d;
+    --paper:      #eef2f3;
+    --surface:    #ffffff;
+    --surface-2:  #f6f9fa;
+    --line:       #d7e0e3;
+    --line-soft:  #e7edef;
+    --teal:       #115e74;
+    --teal-soft:  #e2eff3;
+    --magenta:    #a8234f;
+    --magenta-soft: #fae7ee;
+    --amber:      #8a6100;
+    --amber-soft: #fdf3d9;
+    --green:      #3f7d20;
+    --green-soft: #e9f3e2;
+
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Source Serif 4", georgia, "Times New Roman", serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", consolas, monospace;
+
+    --measure: 68ch;
+    --gap: 1.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:        #e6eef1;
+      --ink-2:      #a9bdc4;
+      --ink-3:      #7d949c;
+      --paper:      #0a1519;
+      --surface:    #101f25;
+      --surface-2:  #14262d;
+      --line:       #233b44;
+      --line-soft:  #1b2f36;
+      --teal:       #63b6d0;
+      --teal-soft:  #12313d;
+      --magenta:    #ef7ba3;
+      --magenta-soft: #3a1522;
+      --amber:      #e0b44e;
+      --amber-soft: #33280d;
+      --green:      #8dc96a;
+      --green-soft: #1c2d15;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink:        #e6eef1;
+    --ink-2:      #a9bdc4;
+    --ink-3:      #7d949c;
+    --paper:      #0a1519;
+    --surface:    #101f25;
+    --surface-2:  #14262d;
+    --line:       #233b44;
+    --line-soft:  #1b2f36;
+    --teal:       #63b6d0;
+    --teal-soft:  #12313d;
+    --magenta:    #ef7ba3;
+    --magenta-soft: #3a1522;
+    --amber:      #e0b44e;
+    --amber-soft: #33280d;
+    --green:      #8dc96a;
+    --green-soft: #1c2d15;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 60rem;
+    margin-inline: auto;
+    padding: 0 1.25rem 6rem;
+  }
+
+  /* Masthead ------------------------------------------------------------ */
+  .masthead {
+    padding: 3.5rem 0 2rem;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 2.5rem;
+  }
+
+  .masthead__eyebrow {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: .75rem;
+  }
+
+  .masthead h1 {
+    font-family: var(--display);
+    font-size: clamp(2.75rem, 8vw, 4.5rem);
+    font-weight: 700;
+    line-height: .95;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+
+  .masthead p {
+    margin-top: 1rem;
+    max-width: 48ch;
+    color: var(--ink-2);
+    font-size: 1.125rem;
+  }
+
+  /* Contents ------------------------------------------------------------ */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    margin-bottom: 3.5rem;
+  }
+
+  .toc h2 {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .toc ol {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: .4rem;
+    counter-reset: toc;
+  }
+
+  .toc li { counter-increment: toc; }
+
+  .toc a {
+    display: flex;
+    gap: .85rem;
+    align-items: baseline;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: .2rem 0;
+    border-bottom: 1px solid transparent;
+  }
+
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: .7rem;
+    font-weight: 400;
+    color: var(--teal);
+    flex: none;
+  }
+
+  .toc a:hover { border-bottom-color: var(--teal); color: var(--teal); }
+
+  /* Sections ------------------------------------------------------------ */
+  section { margin-bottom: 4rem; scroll-margin-top: 1.5rem; }
+
+  h2.part {
+    font-family: var(--display);
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -.005em;
+    padding-bottom: .6rem;
+    border-bottom: 1px solid var(--ink);
+    margin-bottom: 1.5rem;
+    text-wrap: balance;
+  }
+
+  h2.part .num {
+    font-family: var(--mono);
+    font-size: .75rem;
+    font-weight: 400;
+    color: var(--teal);
+    vertical-align: .9em;
+    margin-right: .6rem;
+    letter-spacing: .1em;
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 2.25rem 0 .6rem;
+    text-wrap: balance;
+  }
+
+  h4 {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 1.5rem 0 .4rem;
+  }
+
+  p, ul, ol { max-width: var(--measure); }
+  p + p { margin-top: .9rem; }
+
+  ul, ol { padding-left: 1.15rem; margin-top: .7rem; display: grid; gap: .45rem; }
+  li::marker { color: var(--ink-3); }
+
+  a { color: var(--teal); }
+
+  strong { font-weight: 600; }
+
+  code {
+    font-family: var(--mono);
+    font-size: .82em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    padding: .08em .34em;
+    border-radius: 2px;
+    word-break: break-word;
+  }
+
+  /* Term definition ----------------------------------------------------- */
+  .term {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .3rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--line-soft);
+    max-width: var(--measure);
+  }
+
+  .term:last-of-type { border-bottom: 1px solid var(--line-soft); }
+
+  .term__name {
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .term__kind {
+    font-family: var(--mono);
+    font-size: .62rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-left: .5rem;
+    vertical-align: .18em;
+    white-space: nowrap;
+  }
+
+  .term p { font-size: 1rem; color: var(--ink-2); max-width: none; }
+  .term p strong { color: var(--ink); }
+
+  @media (min-width: 46rem) {
+    .term {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 1.5rem;
+      align-items: baseline;
+    }
+  }
+
+  /* Figures ------------------------------------------------------------- */
+  figure {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  figure svg { width: 100%; height: auto; display: block; color: var(--ink); }
+
+  .scroll-x { overflow-x: auto; }
+  .scroll-x svg { min-width: 34rem; }
+
+  figcaption {
+    margin-top: 1.1rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--line-soft);
+    font-size: .92rem;
+    color: var(--ink-2);
+    max-width: var(--measure);
+  }
+
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  /* Callout ------------------------------------------------------------- */
+  .note {
+    border-left: 3px solid var(--teal);
+    background: var(--surface);
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+    max-width: var(--measure);
+    font-size: 1rem;
+  }
+
+  .note--why { border-left-color: var(--magenta); }
+  .note--watch { border-left-color: var(--amber); }
+
+  .note__label {
+    font-family: var(--mono);
+    font-size: .64rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    display: block;
+    margin-bottom: .3rem;
+  }
+
+  .note--why .note__label { color: var(--magenta); }
+  .note--watch .note__label { color: var(--amber); }
+
+  /* Steps --------------------------------------------------------------- */
+  .steps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: 0; max-width: var(--measure); }
+
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: .9rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .steps li:last-child { border-bottom: 1px solid var(--line-soft); }
+
+  .steps li::before {
+    content: counter(step);
+    font-family: var(--mono);
+    font-size: .8rem;
+    color: var(--teal);
+    padding-top: .28rem;
+  }
+
+  .steps__body { min-width: 0; }
+
+  pre {
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.7;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--teal);
+    padding: .95rem 1.15rem;
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    max-width: var(--measure);
+  }
+
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+  pre .cm { color: var(--ink-3); }
+  pre .hi { color: var(--teal); font-weight: 600; }
+
+  .levels { display: grid; gap: 0; margin: 1.5rem 0; max-width: var(--measure); }
+
+  .level {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1.1rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .levels .level:last-child { border-bottom: 1px solid var(--line-soft); }
+
+  .level__tag {
+    font-family: var(--mono);
+    font-size: .62rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--teal);
+    padding-top: .35rem;
+  }
+
+  .level__name { font-family: var(--display); font-size: 1.2rem; font-weight: 600; display: block; }
+  .level p { max-width: none; font-size: 1rem; color: var(--ink-2); margin-top: .15rem; }
+  .level--used .level__tag { color: var(--magenta); }
+  .level--used .level__name::after {
+    content: "what we use";
+    font-family: var(--mono);
+    font-size: .58rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--magenta);
+    background: var(--magenta-soft);
+    padding: .12em .45em;
+    margin-left: .5rem;
+    vertical-align: .2em;
+    white-space: nowrap;
+  }
+
+  .steps b {
+    font-family: var(--display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    display: block;
+    margin-bottom: .1rem;
+  }
+
+  .steps p { max-width: none; color: var(--ink-2); font-size: 1rem; }
+
+  /* Tables -------------------------------------------------------------- */
+  .tablewrap { overflow-x: auto; margin: 1.5rem 0; border: 1px solid var(--line); background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; min-width: 32rem; }
+
+  th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+
+  thead th {
+    font-family: var(--mono);
+    font-size: .64rem;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    background: var(--surface-2);
+  }
+
+  tbody tr:last-child td { border-bottom: 0; }
+
+  td code { background: none; border: 0; padding: 0; }
+
+  .num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* File tree ----------------------------------------------------------- */
+  .tree {
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.9;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1.25rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+
+  .tree .dir { color: var(--teal); font-weight: 600; }
+  .tree .cm { color: var(--ink-3); }
+
+  footer {
+    margin-top: 5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--ink);
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--ink-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="masthead__eyebrow">Ignite Community Services · Support worker portal</p>
+  <h1>How this thing is built</h1>
+  <p>Every moving part of the care portal, explained from scratch — no prior knowledge of Django or React assumed. Read it top to bottom once, and you will be able to explain the system to anyone.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">Contents</h2>
+  <ol>
+    <li><a href="#plain">The whole thing in one paragraph</a></li>
+    <li><a href="#decoupled">Two programs, one website</a></li>
+    <li><a href="#words">Every technology, in plain words</a></li>
+    <li><a href="#backend">How the back end is organised</a></li>
+    <li><a href="#frontend">How the front end is organised</a></li>
+    <li><a href="#journey">What happens when you tap something</a></li>
+    <li><a href="#decisions">The four decisions everything rests on</a></li>
+    <li><a href="#submit">What happens when a worker taps Submit</a></li>
+    <li><a href="#auth">Signing in, and why it is a cookie</a></li>
+    <li><a href="#map">The folder map</a></li>
+    <li><a href="#next">Where it goes from here</a></li>
+  </ol>
+</nav>
+
+<!-- 1 ------------------------------------------------------------------- -->
+<section id="plain">
+  <h2 class="part"><span class="num">01</span>The whole thing in one paragraph</h2>
+
+  <p>Ignite runs three residential care homes. In each home, every participant has a paper book, and every shift a support worker writes what happened — what they ate, whether they showered, how they slept. The next worker reads the book before starting.</p>
+
+  <p>This portal replaces the book. A worker opens it on their phone, sees the participants they still need to write up this shift, fills in a form, and submits. The moment they submit, the system <strong>freezes that record, turns it into a PDF that looks exactly like the paper form</strong>, and files it. A participant's whole book is those PDFs stapled together, oldest first — one file, downloadable any time.</p>
+
+  <p>Everything else exists to serve that loop: who can see whom, what the manager sees, how the client pulls a month of bowel data into a spreadsheet, and how it stays trustworthy enough for an NDIS audit.</p>
+</section>
+
+<!-- 2 ------------------------------------------------------------------- -->
+<section id="decoupled">
+  <h2 class="part"><span class="num">02</span>Two programs, one website</h2>
+
+  <p>This is the single most important thing to understand about the shape of the codebase, and it is the change from the first version.</p>
+
+  <p>Most web apps are <strong>one</strong> program. The server reads the database, builds a finished HTML page, and sends it. The browser just displays it. Simple, and it works — that is how WordPress works, and how this portal was originally built.</p>
+
+  <p>This portal is now <strong>two</strong> programs that do not know anything about each other's insides:</p>
+
+  <div class="term">
+    <div><span class="term__name">The back end</span><span class="term__kind">Python · Django</span></div>
+    <p>Owns the database, every rule, and the PDF machinery. It sends <strong>data</strong>, never pages. Ask it for a participant and it replies <code>{"id": 4, "full_name": "Daniel Reeves", "room": "Room 2"}</code>. It has no idea what a screen looks like.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">The front end</span><span class="term__kind">TypeScript · React</span></div>
+    <p>Owns every pixel. It runs <em>inside the browser</em>, asks the back end for data, and draws the screens from it. It has no idea what a database is.</p>
+  </div>
+
+  <p>Between them sits an <strong>API</strong> — an agreed list of addresses you can ask for data, and the exact shape of the answer. Here every one of them starts with <code>/api/</code>.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 880 340" role="img" aria-label="One web address is split by Caddy: slash serves the React files, slash-api proxies to Django, which owns the database and the PDF store.">
+        <defs>
+          <marker id="s1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="s2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--teal)"/>
+          </marker>
+        </defs>
+
+        <rect x="8" y="118" width="140" height="70" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="78" y="147" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor" font-family="sans-serif">The phone</text>
+        <text x="78" y="164" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">one address only:</text>
+        <text x="78" y="178" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="monospace">ignite.example</text>
+
+        <line x1="148" y1="153" x2="206" y2="153" stroke="currentColor" stroke-width="1.4" marker-end="url(#s1)"/>
+
+        <rect x="208" y="106" width="128" height="94" rx="3" fill="#115e74" stroke="#115e74"/>
+        <text x="272" y="140" text-anchor="middle" font-size="13" font-weight="600" fill="#fff" font-family="sans-serif">Caddy</text>
+        <text x="272" y="158" text-anchor="middle" font-size="10" fill="#fff" opacity=".85" font-family="sans-serif">the front door</text>
+        <text x="272" y="173" text-anchor="middle" font-size="10" fill="#fff" opacity=".85" font-family="sans-serif">HTTPS + routing</text>
+
+        <path d="M336 132 L378 132 L378 62 L420 62" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#s1)"/>
+        <text x="386" y="52" font-size="10" fill="currentColor" opacity=".8" font-family="monospace">/</text>
+
+        <path d="M336 174 L378 174 L378 244 L420 244" fill="none" stroke="var(--teal)" stroke-width="1.4" marker-end="url(#s2)"/>
+        <text x="386" y="264" font-size="10" fill="var(--teal)" font-family="monospace">/api/</text>
+
+        <rect x="422" y="34" width="200" height="58" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="522" y="57" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">The built React files</text>
+        <text x="522" y="76" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">one .js, one .css, sent once</text>
+
+        <rect x="422" y="216" width="200" height="58" rx="3" fill="none" stroke="var(--teal)" stroke-width="1.6"/>
+        <text x="522" y="239" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--teal)" font-family="sans-serif">Django + gunicorn</text>
+        <text x="522" y="258" text-anchor="middle" font-size="10" fill="var(--teal)" opacity=".85" font-family="sans-serif">answers in JSON, never HTML</text>
+
+        <path d="M622 245 L650 245 L650 212 L672 212" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#s1)"/>
+        <path d="M622 245 L650 245 L650 276 L672 276" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#s1)"/>
+
+        <rect x="678" y="186" width="180" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text x="768" y="217" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">PostgreSQL</text>
+
+        <rect x="678" y="250" width="180" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text x="768" y="274" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Stored PDFs</text>
+        <text x="768" y="290" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">one file per record</text>
+
+        <text x="8" y="52" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">ONE MACHINE · ONE DOMAIN · ONE CERTIFICATE</text>
+        <text x="8" y="324" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">Two processes, not two servers. The browser only ever sees one website.</text>
+      </svg>
+    </div>
+    <figcaption><b>Decoupled, but not split up.</b> Caddy is a web server that also handles HTTPS certificates automatically. It serves the React files for every address except <code>/api/</code>, which it hands to Django. To the browser this is one website — which is exactly what makes the sign-in cookie safe (<a href="#auth">section 09</a>).</figcaption>
+  </figure>
+
+  <h3>Why bother, when one program worked?</h3>
+
+  <p>Three reasons, in the order they actually matter to this client.</p>
+
+  <div class="term">
+    <div><span class="term__name">A phone app is coming</span><span class="term__kind">The real reason</span></div>
+    <p>A native app cannot use HTML pages. It needs data. If the only way to get data out of the system is to build an API later, that is a rewrite of the entire back end at the worst possible moment. Now the API <em>is</em> the back end — an app is a third client alongside the browser, not a second system.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">The two halves can change independently</span><span class="term__kind">Day to day</span></div>
+    <p>Redesigning a screen touches no Python. Adding a database column touches no React. Two people can work on the same feature without stepping on each other, and a front-end change cannot break a business rule because it is not allowed anywhere near one.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">The rules live in exactly one place</span><span class="term__kind">Safety</span></div>
+    <p>Every client — this website, a future app, a future integration — has to come through the same API and obey the same checks. There is no second copy of "a worker may only see their own house" to drift out of step.</p>
+  </div>
+
+  <div class="note note--watch">
+    <span class="note__label">The honest cost</span>
+    Decoupling is genuinely <em>more</em> work than one program: two languages, a build step, and data that must be described twice — once in Python, once in TypeScript. It is worth it here because a mobile app is a stated intention rather than a hypothetical. If it were not, one program would have been the better engineering call.
+  </div>
+</section>
+
+<!-- 3 ------------------------------------------------------------------- -->
+<section id="words">
+  <h2 class="part"><span class="num">03</span>Every technology, in plain words</h2>
+
+  <p>Here is every piece, what it is, and what it is <em>for</em> in this project.</p>
+
+  <h3>The back end</h3>
+
+  <div class="term">
+    <div><span class="term__name">Python</span><span class="term__kind">Language</span></div>
+    <p>The language everything server-side is written in. Chosen because the best PDF tool in existence is a Python library, and because it reads almost like English, which matters when someone else has to maintain this in five years.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Django</span><span class="term__kind">Framework</span></div>
+    <p>A <strong>framework</strong> is a pre-built skeleton for a web app — it already knows how to handle logins, talk to a database, and turn a web address into code, so you only write the parts unique to your project. Django is the most established Python one. We use the <strong>LTS</strong> release (Long Term Support): security patches guaranteed until 2028, which matters for a system holding clinical records.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Django REST Framework</span><span class="term__kind">Add-on · "DRF"</span></div>
+    <p>The layer that turns Django from a page-builder into a data service. It handles converting database rows to JSON and back, paging long lists, refusing unauthenticated callers, and returning proper error codes. It is the reason the API was days of work rather than weeks.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">PostgreSQL</span><span class="term__kind">Database</span></div>
+    <p>The filing cabinet. Every participant, worker, record and audit entry is a row in a table. We use <strong>SQLite</strong> on your laptop (a database that is just a single file — zero setup) and PostgreSQL on the real server. Django talks to both identically, so no code changes.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">JSON</span><span class="term__kind">A way of writing data</span></div>
+    <p>Not a technology so much as a notation — curly brackets, names and values. It is what the two halves speak to each other. <code>{"full_name": "Daniel Reeves", "room": "Room 2"}</code> is JSON. Every language on earth can read it, which is why an app, a website and a spreadsheet script can all talk to the same API.</p>
+  </div>
+
+  <h3>The front end</h3>
+
+  <div class="term">
+    <div><span class="term__name">React</span><span class="term__kind">Library</span></div>
+    <p>Draws the screens. You write small functions called <strong>components</strong> — a participant row, a status pill, a form field — that each say "given this data, here is what I look like". React works out what changed and updates only that part of the page. It never reloads, because it was never loading pages in the first place; it is one page that redraws itself.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">TypeScript</span><span class="term__kind">Language</span></div>
+    <p>JavaScript with the types written down. You declare that a participant has a <code>full_name</code> that is text and a <code>room</code> that is text, and the editor then catches a typo like <code>fullName</code> before the code ever runs. In a decoupled system this is what stops the two halves quietly drifting apart: <code>src/api/types.ts</code> is the written-down contract of what the back end sends.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Vite</span><span class="term__kind">Build tool</span></div>
+    <p>Browsers cannot read TypeScript or React directly, so something has to translate it into plain JavaScript. Vite does that — instantly while you are developing (save a file, the screen updates without losing your place) and once at the end to produce the files that ship.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">React Router</span><span class="term__kind">Library</span></div>
+    <p>Decides which screen matches which address. <code>/participants/4</code> shows Daniel's page. It changes the address bar and the back button works normally, but no page is ever fetched — it just draws a different component.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">TanStack Query</span><span class="term__kind">Library</span></div>
+    <p>Handles asking the back end for data, and is doing more work than it sounds. It remembers answers so revisiting a screen is instant, knows when a cached answer is stale, retries a failed request, and gives every screen a plain <em>loading / error / here-is-your-data</em> state to render. Without it, every screen would hand-roll the same fiddly logic slightly differently.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Native CSS</span><span class="term__kind">Styling</span></div>
+    <p>No Tailwind, no Sass. Plain modern CSS organised in numbered layers (<strong>ITCSS</strong>) with <strong>BEM</strong> naming — <code>.c-participant__name</code> reads as "the name part of the participant component". Deliberate: styling is the part most likely to be handed to someone else, and plain CSS is the one thing every web developer already knows.</p>
+  </div>
+
+  <h3>The paperwork</h3>
+
+  <div class="term">
+    <div><span class="term__name">WeasyPrint</span><span class="term__kind">HTML → PDF</span></div>
+    <p>Takes an HTML page and prints it to a PDF, honouring page size, margins and repeating footers. This is why the generated record looks like the client's real form, boxed <code>YES</code> / <code>NO</code> and all — we describe the paper form in HTML and CSS and WeasyPrint prints it. It is also the one place Django still uses templates.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">pypdf</span><span class="term__kind">PDF stapler</span></div>
+    <p>Joins finished PDFs end to end. This is what builds a participant's record book out of their individual daily records.</p>
+  </div>
+
+  <h3>The safety net</h3>
+
+  <div class="term">
+    <div><span class="term__name">django-simple-history</span><span class="term__kind">Add-on</span></div>
+    <p>Silently keeps a copy of every version of a record. If anyone ever asks "what did this say before it was changed", there is an answer.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">django-otp</span><span class="term__kind">Add-on</span></div>
+    <p>Two-factor authentication — the six-digit code from an authenticator app. Intended for managers, who can see every participant in the service.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">django-axes</span><span class="term__kind">Add-on</span></div>
+    <p>Locks an account after repeated failed logins, so nobody can sit there guessing passwords.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">pytest &amp; Playwright</span><span class="term__kind">Testing</span></div>
+    <p><strong>pytest</strong> runs the 52 automated checks that prove the important rules still hold — that a night shift is filed under the right day, that a worker cannot reach another house's participants. <strong>Playwright</strong> drives a real browser through the real screens, which is how the download bug and the "every participant says Not started" bug were both caught.</p>
+  </div>
+
+  <div class="note">
+    <span class="note__label">What it costs the phone</span>
+    The whole front end is <strong>about 107 KB compressed</strong> — 98 KB of JavaScript and 9 KB of CSS — downloaded once and then cached. Fonts add 134 KB, also once. That is a single modest photo, for the entire application.
+  </div>
+</section>
+
+<!-- 4 ------------------------------------------------------------------- -->
+<section id="backend">
+  <h2 class="part"><span class="num">04</span>How the back end is organised</h2>
+
+  <p>Django splits every feature into jobs with names. Learn these and the Python side opens up.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th style="width:9rem">The word</th><th style="width:11rem">Plain meaning</th><th>In this project</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Model</b></td>
+          <td>The shape of a thing, and its rules</td>
+          <td><code>CareRecord</code> says a record has a participant, a date, a shift, answers and a status. Django turns this into database tables for you.</td>
+        </tr>
+        <tr>
+          <td><b>View</b></td>
+          <td>What happens when someone calls an address</td>
+          <td><code>dashboard()</code> works out who still owes a record this shift and returns that as data. In the old version it returned a page; now it returns JSON.</td>
+        </tr>
+        <tr>
+          <td><b>Serializer</b></td>
+          <td>The translator between a database row and JSON</td>
+          <td><code>ParticipantListSerializer</code> decides that a participant sent over the wire has these eleven fields and not, for example, their emergency contacts.</td>
+        </tr>
+        <tr>
+          <td><b>URL routing</b></td>
+          <td>The address book</td>
+          <td><code>apps/api/urls.py</code> is the entire public surface of the system on one screen — every address a client can call.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Two more words you will see constantly:</p>
+
+  <div class="term">
+    <div><span class="term__name">ORM</span><span class="term__kind">Object-Relational Mapper</span></div>
+    <p>Lets you query the database in Python instead of SQL. <code>Participant.objects.filter(home=acacia)</code> means "every participant in Acacia House". Django writes the SQL. It also means nobody can inject malicious SQL through a form field — a whole class of attack simply does not apply.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Migration</span><span class="term__kind">Database change file</span></div>
+    <p>When you change a model — say you add a room number to Participant — Django writes a small file describing that change. Running it updates the database. Because these files live in the repository, every copy of the app can be brought to the same shape, in the same order, safely. It is version control for the database.</p>
+  </div>
+
+  <h3>Apps: the filing system</h3>
+
+  <p>Django encourages splitting a project into <strong>apps</strong> — self-contained folders, one per area of the business. Not separate programs; just tidy drawers.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th style="width:9rem">App</th><th>Owns</th></tr></thead>
+      <tbody>
+        <tr><td><code>api</code></td><td>Every address, every serializer, sign-in, and the spreadsheet exports. The only app that touches HTTP.</td></tr>
+        <tr><td><code>people</code></td><td>Homes, participants, staff and who may see whom</td></tr>
+        <tr><td><code>records</code></td><td>The care record itself, the form engine, shift arithmetic, filtering</td></tr>
+        <tr><td><code>notices</code></td><td>Manager announcements and who has read them</td></tr>
+        <tr><td><code>pdfgen</code></td><td>Turning records into PDFs and stapling books</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="note__label">Worth noticing</span>
+    <code>api</code> is <em>thin</em> on purpose. It knows how to receive a request and shape a reply, and nothing else. The actual thinking — which day a night shift belongs to, whether an answer is valid, who is allowed to see a participant — lives in <code>people</code> and <code>records</code>, where a future mobile API, a scheduled job or a management command can all reuse it.
+  </div>
+</section>
+
+<!-- 5 ------------------------------------------------------------------- -->
+<section id="frontend">
+  <h2 class="part"><span class="num">05</span>How the front end is organised</h2>
+
+  <p>Four ideas, and you can read any screen in the project.</p>
+
+  <div class="term">
+    <div><span class="term__name">Component</span><span class="term__kind">A piece of screen</span></div>
+    <p>A function that returns what something looks like. <code>StatusPill</code> takes a state and returns the little green "Complete" badge. <code>ParticipantRow</code> takes a participant and returns their row. Components are used wherever they are needed and only exist once, so the badge on the dashboard and the badge on the participants list can never look different.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Screen</span><span class="term__kind">A whole page</span></div>
+    <p>One file per thing you can navigate to — <code>Dashboard.tsx</code>, <code>Participants.tsx</code>, <code>RecordForm.tsx</code>. A screen asks for its data, then arranges components. There are ten.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">State</span><span class="term__kind">What the screen currently knows</span></div>
+    <p>Which filters are set, what has been typed, whether the menu is open. When state changes React redraws whatever depended on it — you never write "now update that bit of the page", you just change the value.</p>
+  </div>
+
+  <div class="term">
+    <div><span class="term__name">Query</span><span class="term__kind">A request for server data</span></div>
+    <p>A named request handled by TanStack Query: <code>["participants"]</code>, <code>["record", 12]</code>. Naming them is what lets one screen say "the dashboard numbers just changed, throw away what you cached" after a submit, so the next screen shows the truth instead of a stale copy.</p>
+  </div>
+
+  <p>Everything the front end knows about the back end goes through one small file, <code>src/api/client.ts</code>. It attaches the sign-in cookie, adds the security token described in <a href="#auth">section 09</a>, and turns an error reply into a proper error a screen can display. No screen ever calls the network directly.</p>
+
+  <div class="note note--why">
+    <span class="note__label">The rule that keeps this honest</span>
+    Business rules are never re-implemented in React. The form's "show this question only if they answered No twice" logic mirrors the schema the server sent, and the server validates it all again on submit regardless. The front end is allowed to be convenient. It is never allowed to be the authority.
+  </div>
+</section>
+
+<!-- 6 ------------------------------------------------------------------- -->
+<section id="journey">
+  <h2 class="part"><span class="num">06</span>What happens when you tap something</h2>
+
+  <p>Follow one tap all the way through. A worker taps <em>Participants</em> in the menu.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 880 330" role="img" aria-label="A tap is handled by React Router, which asks TanStack Query for data; the API client fetches from Django, which checks permissions, queries the database, serialises to JSON and returns it for React to draw.">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--teal)"/>
+          </marker>
+        </defs>
+
+        <text x="8" y="24" font-size="9.5" fill="currentColor" opacity=".6" font-family="sans-serif">IN THE BROWSER</text>
+        <rect x="6" y="32" width="428" height="208" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>
+
+        <rect x="20" y="58" width="118" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="79" y="80" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">The tap</text>
+        <text x="79" y="96" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">no page is fetched</text>
+
+        <line x1="138" y1="84" x2="176" y2="84" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+
+        <rect x="178" y="58" width="118" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="237" y="80" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">React Router</text>
+        <text x="237" y="96" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">picks the screen</text>
+
+        <line x1="296" y1="84" x2="334" y2="84" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+
+        <rect x="336" y="58" width="86" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="379" y="80" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">Query</text>
+        <text x="379" y="96" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">cached?</text>
+
+        <path d="M379 110 L379 132 L200 132" fill="none" stroke="var(--green)" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <polygon points="200,132 208,128 208,136" fill="var(--green)"/>
+        <text x="212" y="128" font-size="9.5" fill="var(--green)" font-family="sans-serif">yes → drawn instantly</text>
+
+        <path d="M422 84 L470 84 L470 178 L502 178" fill="none" stroke="var(--teal)" stroke-width="1.4" marker-end="url(#a2)"/>
+        <text x="440" y="78" font-size="9.5" fill="var(--teal)" font-family="sans-serif">no →</text>
+        <text x="502" y="140" font-size="9.5" fill="var(--teal)" font-family="monospace">GET /api/participants/</text>
+
+        <text x="500" y="24" font-size="9.5" fill="currentColor" opacity=".6" font-family="sans-serif">ON THE SERVER</text>
+        <rect x="498" y="32" width="376" height="266" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>
+
+        <rect x="502" y="152" width="164" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="584" y="174" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">Is this you?</text>
+        <text x="584" y="190" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">cookie · which house?</text>
+
+        <line x1="666" y1="178" x2="702" y2="178" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+
+        <rect x="704" y="152" width="160" height="52" rx="3" fill="#115e74" stroke="#115e74"/>
+        <text x="784" y="174" text-anchor="middle" font-size="12.5" font-weight="600" fill="#fff" font-family="sans-serif">The view</text>
+        <text x="784" y="190" text-anchor="middle" font-size="10" fill="#fff" opacity=".85" font-family="sans-serif">participant_list()</text>
+
+        <line x1="784" y1="204" x2="784" y2="234" stroke="var(--teal)" stroke-width="1.4" marker-end="url(#a2)"/>
+
+        <rect x="704" y="236" width="160" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text x="784" y="264" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Database</text>
+
+        <rect x="502" y="236" width="164" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="584" y="255" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Serializer</text>
+        <text x="584" y="271" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">rows → JSON</text>
+
+        <line x1="704" y1="259" x2="670" y2="259" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+
+        <path d="M502 259 L440 259 L440 200 L300 200" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#a1)"/>
+        <text x="310" y="192" font-size="9.5" fill="currentColor" opacity=".75" font-family="monospace">[{ id: 4, full_name: … }]</text>
+
+        <rect x="140" y="176" width="158" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <text x="219" y="198" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">React draws it</text>
+        <text x="219" y="214" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">and caches the answer</text>
+
+        <text x="8" y="318" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">Measured: participants 9 ms / 10 queries · manager dashboard 22 ms / 36 queries · records page 22 ms / 34 queries.</text>
+      </svg>
+    </div>
+    <figcaption><b>One tap, start to finish.</b> Notice how little crosses the line: a short list of data, not a rebuilt page. And notice the green path — a screen you have already visited draws from cache immediately and only then checks for fresher data, which is why moving around the app feels instant even on a bad connection.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="note__label">"But what if the JSON is huge?"</span>
+    Long lists are <strong>paged</strong>: the records screen asks for 25 at a time and the reply says how many exist in total, which is what draws "Page 1 of 3". Filtering happens on the server too — asking for "physio: yes" fetches only matching records, rather than downloading everything and hiding some.
+  </div>
+
+  <h3>What replaced the old page reloads</h3>
+
+  <p>The first version used a small library called HTMX to avoid full page reloads. That whole idea is now gone, because there are no pages to reload — the browser loads the application once and then only ever exchanges data. Three practical consequences worth knowing:</p>
+
+  <div class="levels">
+    <div class="level">
+      <span class="level__tag">Better</span>
+      <div>
+        <span class="level__name">The screen keeps its place</span>
+        <p>Scroll position, half-typed answers, an open menu — none of it is thrown away when you navigate, because nothing is rebuilt.</p>
+      </div>
+    </div>
+    <div class="level">
+      <span class="level__tag">Better</span>
+      <div>
+        <span class="level__name">Going back is free</span>
+        <p>Returning to a screen you have already seen costs nothing at all. The data is already in memory.</p>
+      </div>
+    </div>
+    <div class="level">
+      <span class="level__tag">Watch</span>
+      <div>
+        <span class="level__name">Cached data can go stale</span>
+        <p>The one genuinely new failure mode. Submit a record and the dashboard would happily keep showing its old numbers unless the code explicitly says "that is out of date now". It bit us once in testing; there is now a named cache entry per screen and a submit clears the ones it affects.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 ------------------------------------------------------------------- -->
+<section id="decisions">
+  <h2 class="part"><span class="num">07</span>The four decisions everything rests on</h2>
+
+  <p>Most of this codebase is ordinary. Four choices are not, and they are the reason it will be cheap rather than expensive to live with. All four survived the move to React unchanged, which is itself a decent sign they were the right ones. If you remember nothing else, remember these.</p>
+
+  <h3>One — forms are data, not code</h3>
+
+  <p>The obvious way to build a form is to write it: a model with a field per question, a screen with an input per question, a PDF layout to match. Do that and every new form the client asks for — Bowel Chart, Food Chart, Bruise Chart, Incident Report — is a fortnight of work and a deployment.</p>
+
+  <p>Instead, each form is a <strong>JSON schema</strong>: a plain text file listing the questions, their types, and the rules between them. The back end serves that file over the API, and the front end draws whatever it describes.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 820 268" role="img" aria-label="A single JSON schema file is served over the API to the React form renderer and used by the PDF print layout, so one definition drives both outputs and a future app as well.">
+        <defs>
+          <marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="b2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--magenta)"/>
+          </marker>
+        </defs>
+
+        <rect x="10" y="86" width="196" height="94" rx="3" fill="#115e74" stroke="#115e74"/>
+        <text x="108" y="116" text-anchor="middle" font-size="13.5" font-weight="600" fill="#fff" font-family="sans-serif">daily_care_v02.json</text>
+        <text x="108" y="136" text-anchor="middle" font-size="10.5" fill="#fff" opacity=".85" font-family="sans-serif">the questions, the types,</text>
+        <text x="108" y="151" text-anchor="middle" font-size="10.5" fill="#fff" opacity=".85" font-family="sans-serif">the rules between them</text>
+        <text x="108" y="72" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".65" font-family="sans-serif">ONE FILE</text>
+
+        <path d="M206 110 L268 110 L268 60 L330 60" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#b1)"/>
+        <path d="M206 156 L268 156 L268 200 L330 200" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#b1)"/>
+        <path d="M206 133 L330 133" fill="none" stroke="var(--magenta)" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#b2)"/>
+
+        <rect x="332" y="34" width="164" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="414" y="55" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">React renderer</text>
+        <text x="414" y="71" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">RecordForm.tsx</text>
+
+        <rect x="332" y="174" width="164" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="414" y="195" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">Print layout</text>
+        <text x="414" y="211" text-anchor="middle" font-size="10" fill="currentColor" opacity=".7" font-family="sans-serif">pdf/daily_care_v02.html</text>
+
+        <line x1="496" y1="60" x2="558" y2="60" stroke="currentColor" stroke-width="1.4" marker-end="url(#b1)"/>
+        <line x1="496" y1="200" x2="558" y2="200" stroke="currentColor" stroke-width="1.4" marker-end="url(#b1)"/>
+
+        <rect x="560" y="34" width="150" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="635" y="65" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">Form on the phone</text>
+
+        <rect x="560" y="174" width="150" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="635" y="205" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor" font-family="sans-serif">PDF of the record</text>
+
+        <rect x="332" y="110" width="164" height="46" rx="3" fill="none" stroke="var(--magenta)" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="414" y="129" text-anchor="middle" font-size="12" font-weight="600" fill="var(--magenta)" font-family="sans-serif">A future phone app</text>
+        <text x="414" y="145" text-anchor="middle" font-size="9.5" fill="var(--magenta)" opacity=".85" font-family="sans-serif">same file, drawn natively</text>
+
+        <text x="10" y="254" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">A new form = one JSON file + one print layout. No new model, no migration, no new screen.</text>
+      </svg>
+    </div>
+    <figcaption><b>One definition, every output.</b> The same schema drives what the worker sees and what the PDF prints, so the two can never drift apart. Decoupling made this pay off harder than it did before: the schema is now <em>served over the API</em>, so a phone app downloads it and draws the form natively — and new forms appear <b>without an App Store release</b>.</figcaption>
+  </figure>
+
+  <div class="note note--why">
+    <span class="note__label">The rule that matters</span>
+    Every record stores <strong>which version of the schema it was filled under</strong>. Change the form in 2027 and a record signed in 2026 still renders under the 2026 rules. Without this, editing a form would silently rewrite history — which in a clinical system is a serious problem, not an inconvenience.
+  </div>
+
+  <h3>Two — answers are stored two ways at once</h3>
+
+  <p>If answers are one flexible blob, adding a form is easy but reporting is agony. If every answer is its own database column, reporting is fast but every new form needs a database change. We do both.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 820 260" role="img" aria-label="One care record row holds a flexible JSON blob of all answers plus a handful of indexed columns copied from it for fast filtering.">
+        <defs>
+          <marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <rect x="230" y="22" width="360" height="188" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <text x="410" y="44" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor" opacity=".8" font-family="sans-serif">ONE ROW IN THE care_record TABLE</text>
+
+        <rect x="248" y="56" width="324" height="66" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <text x="262" y="76" font-size="11.5" font-weight="600" fill="currentColor" font-family="sans-serif">answers</text>
+        <text x="322" y="76" font-size="9.5" fill="currentColor" opacity=".65" font-family="sans-serif">— a JSON blob, any shape</text>
+        <text x="262" y="96" font-size="10" fill="currentColor" opacity=".8" font-family="monospace">{ breakfast: "Weet-Bix…", fluids: "400ml",</text>
+        <text x="262" y="111" font-size="10" fill="currentColor" opacity=".8" font-family="monospace">  bowel: "soft, normal", sleep_from: "23:00" }</text>
+
+        <rect x="248" y="132" width="324" height="62" rx="3" fill="#115e74" stroke="#115e74"/>
+        <text x="262" y="152" font-size="11.5" font-weight="600" fill="#fff" font-family="sans-serif">Promoted columns</text>
+        <text x="392" y="152" font-size="9.5" fill="#fff" opacity=".8" font-family="sans-serif">— real, indexed</text>
+        <text x="262" y="172" font-size="10" fill="#fff" opacity=".9" font-family="monospace">shower ✓   physio ✓   bowel_recorded ✓</text>
+        <text x="262" y="187" font-size="10" fill="#fff" opacity=".9" font-family="monospace">urine_recorded ✓   fluids_recorded ✓</text>
+
+        <line x1="228" y1="88" x2="150" y2="88" stroke="currentColor" stroke-width="1.4" marker-end="url(#c1)"/>
+        <text x="8" y="84" font-size="11" font-weight="600" fill="currentColor" font-family="sans-serif">Draw the form</text>
+        <text x="8" y="99" font-size="9.5" fill="currentColor" opacity=".65" font-family="sans-serif">reads the blob</text>
+
+        <line x1="592" y1="163" x2="670" y2="163" stroke="currentColor" stroke-width="1.4" marker-end="url(#c1)"/>
+        <text x="676" y="159" font-size="11" font-weight="600" fill="currentColor" font-family="sans-serif">Filter &amp; export</text>
+        <text x="676" y="174" font-size="9.5" fill="currentColor" opacity=".65" font-family="sans-serif">reads the columns</text>
+
+        <text x="8" y="240" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">The columns are copied from the blob automatically every time a record is saved — they can never disagree.</text>
+      </svg>
+    </div>
+    <figcaption><b>Flexible where it needs to be, fast where it needs to be.</b> The yellow-highlighted fields on the client's paper form — physio, bowel, urine — are the promoted ones. That is what makes "give me a month of this participant's bowel activity" an instant query rather than a scan of every record.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="note__label">One filter, two consumers</span>
+    The records screen and the spreadsheet export call the <em>same</em> filtering code. That is deliberate, and there is a test for it: a manager who filters the screen and then hits Excel must get exactly the rows they were looking at, not a differently-filtered set.
+  </div>
+
+  <h3>Three — a submitted record can never be edited</h3>
+
+  <p>Once a worker submits, the record locks. Nobody edits it, ever — not the worker, not the manager, not an administrator. A correction is added as a separate <strong>amendment</strong> carrying who wrote it, when, and why, and it prints on the PDF underneath the original.</p>
+
+  <p>Alongside that, an <strong>audit log</strong> records not just changes but <em>reads and downloads</em> too. For health data, who looked at something matters as much as who altered it.</p>
+
+  <div class="note note--why">
+    <span class="note__label">Why it had to be built in from day one</span>
+    This is how clinical records work everywhere, and an NDIS auditor will ask. It is also close to impossible to retrofit — once a system has let people edit records for a year, there is no honest history to reconstruct.
+  </div>
+
+  <h3>Four — a PDF is made once and never re-made</h3>
+
+  <p>The instinct is to generate the PDF fresh whenever someone asks for it. That is wrong here. If the print layout changes in 2027, a record signed in 2026 would come out looking different from the one that was signed — the document would no longer be evidence of anything.</p>
+
+  <p>So the PDF is rendered <strong>once, at the moment of submission</strong>, and stored as a file. The record book is those stored files stapled together. History cannot shift.</p>
+
+  <div class="note note--watch">
+    <span class="note__label">Also true of dates</span>
+    A night shift starting 10pm Tuesday and ending 6am Wednesday belongs to <strong>Tuesday</strong> — the way it does in the paper book. The system stores the date the shift <em>started</em> separately from the moment it was submitted, and prints both. There is a test dedicated to this rule because getting it wrong would misfile records every single night.
+  </div>
+</section>
+
+<!-- 8 ------------------------------------------------------------------- -->
+<section id="submit">
+  <h2 class="part"><span class="num">08</span>What happens when a worker taps Submit</h2>
+
+  <p>This is the most important sequence in the system. It is also the place where decoupling changes the most, so it is worth reading closely.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 880 244" role="img" aria-label="React posts the answers as JSON; the server validates against the schema, locks the record, updates the reportable columns, renders a PDF once and stores it with a fingerprint, then returns the saved record for React to display.">
+        <defs>
+          <marker id="d1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <rect x="6" y="60" width="118" height="56" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="65" y="84" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Submit</text>
+        <text x="65" y="100" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="monospace">POST · JSON</text>
+
+        <line x1="124" y1="88" x2="164" y2="88" stroke="currentColor" stroke-width="1.4" marker-end="url(#d1)"/>
+
+        <rect x="166" y="60" width="126" height="56" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="229" y="84" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Check answers</text>
+        <text x="229" y="100" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">against the schema</text>
+
+        <path d="M229 116 L229 158 L128 158" fill="none" stroke="var(--magenta)" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <polygon points="128,158 136,154 136,162" fill="var(--magenta)"/>
+        <text x="238" y="154" font-size="9.5" fill="var(--magenta)" font-family="sans-serif">missing → 400 with the field name, nothing saved</text>
+
+        <line x1="292" y1="88" x2="332" y2="88" stroke="currentColor" stroke-width="1.4" marker-end="url(#d1)"/>
+
+        <rect x="334" y="60" width="126" height="56" rx="3" fill="#115e74" stroke="#115e74"/>
+        <text x="397" y="84" text-anchor="middle" font-size="12" font-weight="600" fill="#fff" font-family="sans-serif">Lock the record</text>
+        <text x="397" y="100" text-anchor="middle" font-size="9.5" fill="#fff" opacity=".85" font-family="sans-serif">no more editing</text>
+
+        <line x1="460" y1="88" x2="500" y2="88" stroke="currentColor" stroke-width="1.4" marker-end="url(#d1)"/>
+
+        <rect x="502" y="60" width="126" height="56" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="565" y="84" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Render the PDF</text>
+        <text x="565" y="100" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">once · 170 ms</text>
+
+        <line x1="628" y1="88" x2="668" y2="88" stroke="currentColor" stroke-width="1.4" marker-end="url(#d1)"/>
+
+        <rect x="670" y="60" width="126" height="56" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="733" y="84" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Store the file</text>
+        <text x="733" y="100" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">+ a fingerprint</text>
+
+        <text x="6" y="38" font-size="9.5" fill="currentColor" opacity=".6" font-family="sans-serif">EVERY SUBMISSION</text>
+
+        <path d="M733 116 L733 186 L560 186" fill="none" stroke="var(--green)" stroke-width="1.4"/>
+        <polygon points="560,186 568,182 568,190" fill="var(--green)"/>
+        <rect x="300" y="164" width="258" height="44" rx="3" fill="none" stroke="var(--green)" stroke-width="1.3"/>
+        <text x="429" y="182" text-anchor="middle" font-size="11" font-weight="600" fill="var(--green)" font-family="sans-serif">The saved record comes back as JSON</text>
+        <text x="429" y="198" text-anchor="middle" font-size="9.5" fill="var(--green)" opacity=".85" font-family="sans-serif">React shows it — no second request needed</text>
+
+        <text x="6" y="232" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">Record book = these stored files, stapled in order. 14 ms per page.</text>
+      </svg>
+    </div>
+    <figcaption><b>The write path.</b> Validation happens before anything is locked, so a worker who forgot the fluids field gets an error on that field with their typing intact. Only once the answers pass does the record freeze and the PDF get made.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>
+      <div class="steps__body">
+        <b>The answers are read and cleaned</b>
+        <p>Anything the form was hiding at the time — the "if neither, why?" box when they actually did shower — is discarded, so a stale value typed earlier can never end up in the record. The server does this itself; it does not trust the front end to have done it.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>They are checked against the schema</b>
+        <p>Fluids is required every shift. If it is blank the reply is a <code>400</code> naming that exact field, React puts the error under that question, and nothing is saved.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The record locks</b>
+        <p>Status becomes <em>submitted</em>, and who submitted it and exactly when are stamped on. A later attempt to write to it is refused with a <code>409</code> — "this is already settled".</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The reportable columns update</b>
+        <p>Shower, physio, bowel and the rest are copied out of the answers so the manager's filters work.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The PDF is rendered and stored</b>
+        <p>Once. A fingerprint of the file is saved alongside it, so tampering would be detectable.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>An audit entry is written</b>
+        <p>Who submitted what, and when.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The finished record is sent back</b>
+        <p>The reply is the whole saved record, so the app can show the locked version immediately without asking again. This is also where it must throw away its cached dashboard numbers — see the warning below.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="note note--watch">
+    <span class="note__label">A real bug this caused, worth understanding</span>
+    During testing, submitting a record correctly saved and locked it — the database proved it — but the screen still showed the old draft. The app was displaying its <em>cached</em> copy from before the submit. The fix is one line: on a successful submit, replace the cached record with the one the server just returned and mark the dashboard's numbers as stale. This is the characteristic bug of a decoupled front end, and it is the one to look for first when something "does not update".
+  </div>
+
+  <div class="note note--watch">
+    <span class="note__label">Known limit, worth fixing before scale</span>
+    That 170 ms PDF render currently happens <strong>while the worker waits</strong>. Fine for three homes. At fifty it should move to a background queue so the submit returns instantly and the PDF is made a second later. The tool for it is already in the project's dependencies, just not switched on.
+  </div>
+</section>
+
+<!-- 9 ------------------------------------------------------------------- -->
+<section id="auth">
+  <h2 class="part"><span class="num">09</span>Signing in, and why it is a cookie</h2>
+
+  <p>When you decouple, you have to decide how the front end proves who it is on every single request. There are two common answers, and the choice has real security consequences. This one deserves the detail.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 840 296" role="img" aria-label="Comparison: a token stored in browser storage can be read by any script on the page, while an httpOnly session cookie cannot be read by scripts at all.">
+        <rect x="8" y="34" width="392" height="216" rx="3" fill="none" stroke="var(--magenta)" stroke-width="1.4"/>
+        <text x="24" y="60" font-size="12.5" font-weight="600" fill="var(--magenta)" font-family="sans-serif">Option A — a token in browser storage</text>
+        <text x="24" y="78" font-size="10" fill="var(--magenta)" opacity=".85" font-family="sans-serif">The usual answer. Not this one.</text>
+
+        <rect x="24" y="96" width="168" height="60" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="108" y="120" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor" font-family="sans-serif">localStorage</text>
+        <text x="108" y="137" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="monospace">token: "eyJhbGci…"</text>
+
+        <rect x="216" y="96" width="168" height="60" rx="3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="300" y="120" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor" font-family="sans-serif">Any script</text>
+        <text x="300" y="137" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">on the page</text>
+
+        <line x1="192" y1="126" x2="212" y2="126" stroke="var(--magenta)" stroke-width="1.4"/>
+        <polygon points="216,126 208,122 208,130" fill="var(--magenta)"/>
+
+        <text x="24" y="186" font-size="10.5" fill="var(--magenta)" font-family="sans-serif">can read it</text>
+        <text x="24" y="204" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">One bad dependency, one injected script, and the</text>
+        <text x="24" y="220" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">credential walks out of the building. For health data</text>
+        <text x="24" y="236" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">that is a notifiable breach.</text>
+
+        <rect x="424" y="34" width="408" height="216" rx="3" fill="none" stroke="var(--green)" stroke-width="1.6"/>
+        <text x="440" y="60" font-size="12.5" font-weight="600" fill="var(--green)" font-family="sans-serif">Option B — an httpOnly session cookie</text>
+        <text x="440" y="78" font-size="10" fill="var(--green)" opacity=".85" font-family="sans-serif">What this portal uses.</text>
+
+        <rect x="440" y="96" width="168" height="60" rx="3" fill="#3f7d20" stroke="#3f7d20"/>
+        <text x="524" y="120" text-anchor="middle" font-size="11.5" font-weight="600" fill="#fff" font-family="sans-serif">The cookie jar</text>
+        <text x="524" y="137" text-anchor="middle" font-size="9.5" fill="#fff" opacity=".85" font-family="sans-serif">httpOnly · browser only</text>
+
+        <rect x="648" y="96" width="168" height="60" rx="3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="732" y="120" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor" font-family="sans-serif">Any script</text>
+        <text x="732" y="137" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">including ours</text>
+
+        <line x1="608" y1="126" x2="644" y2="126" stroke="var(--green)" stroke-width="1.4" stroke-dasharray="5 4"/>
+        <line x1="618" y1="116" x2="634" y2="136" stroke="var(--magenta)" stroke-width="2.2"/>
+        <line x1="634" y1="116" x2="618" y2="136" stroke="var(--magenta)" stroke-width="2.2"/>
+
+        <text x="440" y="186" font-size="10.5" fill="var(--green)" font-family="sans-serif">cannot read it — not even the app's own code</text>
+        <text x="440" y="204" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">The browser attaches it automatically to every request</text>
+        <text x="440" y="220" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">and there is no copy anywhere a script can reach.</text>
+        <text x="440" y="236" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">Stealing it requires the device, not a script.</text>
+
+        <text x="8" y="282" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">This only works because the app and the API share one origin — which is exactly what Caddy is arranged to give us.</text>
+      </svg>
+    </div>
+    <figcaption><b>The trade that decided it.</b> Tokens are the default advice for decoupled apps because they work across different domains. We do not need that — the app and the API are one domain — so we keep the safer option and give up nothing.</figcaption>
+  </figure>
+
+  <h3>How a sign-in actually goes</h3>
+
+  <ol class="steps">
+    <li>
+      <div class="steps__body">
+        <b>The app asks for a CSRF token</b>
+        <p>A one-off value the server hands out, explained below.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The username and password are posted to <code>/api/auth/login/</code></b>
+        <p>Over HTTPS. Passwords are stored hashed with <strong>Argon2</strong>, the current recommended algorithm — the server never holds the real password and could not tell you what it is.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The server sets a session cookie</b>
+        <p>Marked <code>httpOnly</code> (no script may read it), <code>Secure</code> (never sent over plain HTTP) and <code>SameSite</code> (not sent when another website triggers the request).</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>Every later request carries it automatically</b>
+        <p>The app does not manage this at all. The browser does it.</p>
+      </div>
+    </li>
+    <li>
+      <div class="steps__body">
+        <b>The server decides what you may see</b>
+        <p>Not the app. A support worker asking for another house's participant gets a <code>404</code>, and a worker asking for the records screen gets a <code>403</code>, regardless of what the menu happens to be showing them.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="note">
+    <span class="note__label">CSRF, in one sentence</span>
+    Because the browser attaches the cookie to <em>every</em> request to our domain, a malicious page could otherwise make your browser submit something on your behalf — so the server also demands a token that only our own app can read, which a page on another domain cannot obtain.
+  </div>
+
+  <div class="note note--why">
+    <span class="note__label">And the phone app later?</span>
+    A native app has no cookie jar and no shared origin, so it will use a token — but stored in the phone's <strong>Keychain</strong> or <strong>Keystore</strong>, the operating system's protected vault, which is a genuinely different proposition from browser storage. Django REST Framework can hand out both kinds of credential at once, so adding this changes nothing about how the website signs in.
+  </div>
+
+  <h3>Two guards, not one</h3>
+
+  <p>The hiding of manager-only screens happens twice, on purpose:</p>
+
+  <ul>
+    <li>The <strong>front end</strong> hides Records, Properties and Care workers from a support worker's menu, and sends them back to their own dashboard if they type the address. This is <em>courtesy</em> — it makes the app make sense.</li>
+    <li>The <strong>back end</strong> refuses those addresses outright. This is <em>security</em> — and it is the only one that counts, because anyone can edit what runs in their own browser.</li>
+  </ul>
+
+  <p>Never rely on the first. Always implement the second. In this codebase the second one has tests; the first one does not need them.</p>
+</section>
+
+<!-- 10 ------------------------------------------------------------------ -->
+<section id="map">
+  <h2 class="part"><span class="num">10</span>The folder map</h2>
+
+  <p>Where to look when you want to change something. The top half is Python, the bottom half is TypeScript, and the two only meet at <code>/api/</code>.</p>
+
+  <div class="tree">
+<span class="dir">config/</span>                  <span class="cm">settings; splits into local and production</span>
+<span class="dir">apps/</span>
+  <span class="dir">api/</span>                  <span class="cm">the entire HTTP surface</span>
+    urls.py             <span class="cm">every address, on one screen</span>
+    views.py            <span class="cm">what each address does</span>
+    serializers.py      <span class="cm">database rows → JSON, and back</span>
+    auth.py             <span class="cm">sign in, sign out, CSRF</span>
+    exports.py          <span class="cm">CSV, Excel, bulk PDF</span>
+  <span class="dir">people/</span>               <span class="cm">homes, participants, staff</span>
+    models.py           <span class="cm">the shape of a Participant, a Home, a StaffProfile</span>
+    middleware.py       <span class="cm">remembers which house you are working in</span>
+  <span class="dir">records/</span>              <span class="cm">the heart of the system</span>
+    models.py           <span class="cm">CareRecord, amendments, the audit log</span>
+    schema.py           <span class="cm">reads the form definitions, validates answers</span>
+    services.py         <span class="cm">shift arithmetic — which day does a night shift belong to</span>
+    filters.py          <span class="cm">the reportable-field filters, shared with exports</span>
+  <span class="dir">pdfgen/</span>               <span class="cm">rendering PDFs and stapling books</span>
+  <span class="dir">notices/</span>              <span class="cm">announcements</span>
+<span class="dir">forms/schemas/</span>          <span class="cm">the form definitions — add a form here</span>
+<span class="dir">templates/pdf/</span>          <span class="cm">the print layouts, one per form version</span>
+<span class="dir">tests/</span>                  <span class="cm">the 52 checks</span>
+
+<span class="dir">frontend/</span>
+  <span class="dir">src/api/</span>
+    client.ts           <span class="cm">the only file that talks to the network</span>
+    types.ts            <span class="cm">the written-down shape of every API reply</span>
+  <span class="dir">src/screens/</span>          <span class="cm">one file per screen</span>
+  <span class="dir">src/components/</span>       <span class="cm">the app frame and the shared pieces</span>
+  <span class="dir">src/styles/</span>           <span class="cm">the styling, in numbered layers</span>
+  <span class="dir">public/</span>               <span class="cm">logo, icons, fonts</span>
+  App.tsx               <span class="cm">which address shows which screen</span>
+  </div>
+
+  <p>The CSS uses <strong>ITCSS</strong> — the same layered approach as your existing cutups, just in modern CSS instead of LESS. Settings first (colours, type, spacing), then base elements, then layout objects, then components, then utilities. Anything later can override anything earlier, deliberately.</p>
+
+  <div class="note">
+    <span class="note__label">Running it</span>
+    Two processes in development: <code>manage.py runserver 127.0.0.1:8811</code> for the API, and <code>npm run dev</code> for the app. You open <strong>port 5173</strong> — Vite passes anything starting with <code>/api</code> through to Django, which mirrors what Caddy does in production so the cookie behaves identically. Opening Django's own port shows a 404, because it has no pages. That is correct.
+  </div>
+</section>
+
+<!-- 11 ------------------------------------------------------------------ -->
+<section id="next">
+  <h2 class="part"><span class="num">11</span>Where it goes from here</h2>
+
+  <h3>Not built yet</h3>
+
+  <ul>
+    <li><strong>SharePoint sync.</strong> The client's headline ask. A background job pushes each participant's book to SharePoint via Microsoft's API, regenerating and replacing the file rather than appending to it. Deliberately last, because it sits on top of a working system and a SharePoint outage must never be able to block a worker's submission.</li>
+    <li><strong>The Seizure Observation Chart</strong> as the second form — the test of whether the schema approach really pays.</li>
+    <li><strong>Amendment screens.</strong> The model and the PDF rendering exist; the screen to write one does not.</li>
+    <li><strong>Create and edit screens</strong> for participants and staff. The lists exist; adding is still done through Django's built-in admin.</li>
+    <li><strong>PDF preview</strong> in the browser before saving. The download works; previewing does not exist yet.</li>
+    <li><strong>Offline submission.</strong> Drafts already survive on the phone, but sending needs a connection.</li>
+  </ul>
+
+  <h3>Three things to fix before it gets big</h3>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th style="width:15rem">What</th><th style="width:10rem">Measured now</th><th>Why it matters later</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>PDF made while the worker waits</td>
+          <td class="num-cell">170 ms</td>
+          <td>Move it to a background queue so submitting returns instantly</td>
+        </tr>
+        <tr>
+          <td>Record book rebuilt from scratch</td>
+          <td class="num-cell">14 ms / page</td>
+          <td>Three years of records would take roughly 30 seconds. It needs to build up rather than start over.</td>
+        </tr>
+        <tr>
+          <td>Dashboard queries each home separately</td>
+          <td class="num-cell">36 queries / 3 homes</td>
+          <td>At fifty homes that becomes hundreds. One grouped query fixes it.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>None of these touch the architecture. The data model, the form engine, the audit trail and the API surface all hold up.</p>
+
+  <h3>If it becomes a real mobile app</h3>
+
+  <p>This is now a straightforward piece of work rather than a rewrite, which was the entire point of decoupling.</p>
+
+  <p>The app talks to the same API this website already uses, with the same rules enforced the same way. It downloads the form schema and draws the form natively, so new forms still do not need an App Store release. What is actually needed is a token credential stored in the phone's secure vault, the screens rebuilt in the native toolkit, and a decision about offline behaviour. Weeks, not months, and nothing on the server has to change shape.</p>
+
+  <p>It is still worth asking whether the app is needed. The portal already installs to a phone's home screen and runs fullscreen. Native earns its place when you need the camera, fingerprint login, push notifications or true background sync — so decide on those, not on the idea of an app.</p>
+</section>
+
+<footer>
+  <span>Ignite support worker portal</span>
+  <span>React · TypeScript · Vite · Django 5.2 LTS · DRF · PostgreSQL · WeasyPrint</span>
+  <span>52 tests passing</span>
+</footer>
+
+</div>
+</body>
+</html>

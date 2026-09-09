@@ -7,6 +7,8 @@ dependencies = [
     "django>=5.2,<6.0",
     "django-environ>=0.12",
     "django-filter>=25.1",
+    "djangorestframework>=3.16",
+    "django-cors-headers>=4.7",
     "django-simple-history>=3.10",
     "django-otp>=1.6",
     "django-axes>=8.0",
@@ -24,6 +26,7 @@ dev = [
     "pytest-django>=4.11",
     "ruff>=0.14",
     "freezegun>=1.5",
+    "playwright>=1.50",
 ]
 prod = [
     "psycopg[binary]>=3.2",

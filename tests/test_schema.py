@@ -49,7 +49,14 @@ def test_hidden_fields_do_not_count_towards_a_section():
 def test_promoted_values_track_the_answers():
     values = promoted_values(
         SCHEMA,
-        {"shower": True, "bed_bath": False, "physio": None, "fluids": "800ml", "bowel": "", "urine": "Normal"},
+        {
+            "shower": True,
+            "bed_bath": False,
+            "physio": None,
+            "fluids": "800ml",
+            "bowel": "",
+            "urine": "Normal",
+        },
     )
     assert values["shower"] is True
     assert values["bed_bath"] is False

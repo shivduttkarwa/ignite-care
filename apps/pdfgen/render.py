@@ -49,7 +49,6 @@ def render_record_html(record: CareRecord) -> str:
             "schema": schema,
             "attendances": record.attendances.all(),
             "organisation_name": settings.ORGANISATION_NAME,
-            "static_root": settings.BASE_DIR / "static",
         },
     )
 

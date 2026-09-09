@@ -65,7 +65,7 @@ def test_downloading_a_record_is_audited(client, db, daniel, worker):
     record = make_record(daniel, worker, dt.date(2026, 8, 12))
     client.force_login(worker)
 
-    response = client.get(reverse("record_pdf", args=[record.pk]))
+    response = client.get(reverse("api:record-pdf", args=[record.pk]))
     assert response.status_code == 200
     assert response["Content-Type"] == "application/pdf"
     assert AuditEvent.objects.filter(
@@ -73,19 +73,19 @@ def test_downloading_a_record_is_audited(client, db, daniel, worker):
     ).exists()
 
 
-@pytest.mark.parametrize("route", ["export_csv", "export_xlsx"])
+@pytest.mark.parametrize("route", ["api:export-csv", "api:export-xlsx"])
 def test_exports_are_manager_only(client, db, daniel, worker, route):
     make_record(daniel, worker, dt.date(2026, 8, 12))
     client.force_login(worker)
     response = client.get(reverse(route))
-    assert response.status_code == 302, "a support worker is redirected away from exports"
+    assert response.status_code == 403, "exports are a manager tool"
 
 
 def test_csv_export_carries_the_reportable_columns(client, db, daniel, worker, manager):
     make_record(daniel, worker, dt.date.today())
     client.force_login(manager)
 
-    response = client.get(reverse("export_csv"))
+    response = client.get(reverse("api:export-csv"))
     body = response.content.decode()
     header = body.splitlines()[0]
 
@@ -103,7 +103,7 @@ def test_xlsx_export_opens_as_a_workbook(client, db, daniel, worker, manager):
     make_record(daniel, worker, dt.date.today())
     client.force_login(manager)
 
-    response = client.get(reverse("export_xlsx"))
+    response = client.get(reverse("api:export-xlsx"))
     book = load_workbook(io.BytesIO(response.content))
     assert book.active.title == "Care records"
     assert book.active.cell(row=1, column=1).value == "Date"
@@ -112,9 +112,9 @@ def test_xlsx_export_opens_as_a_workbook(client, db, daniel, worker, manager):
 @pytest.mark.parametrize(
     ("route", "content_type", "filename"),
     [
-        ("export_csv", "text/csv", "ignite-records.csv"),
+        ("api:export-csv", "text/csv", "ignite-records.csv"),
         (
-            "export_xlsx",
+            "api:export-xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "ignite-records.xlsx",
         ),
@@ -123,7 +123,7 @@ def test_xlsx_export_opens_as_a_workbook(client, db, daniel, worker, manager):
 def test_exports_download_rather_than_render(
     client, db, daniel, worker, manager, route, content_type, filename
 ):
-    """Every file endpoint must be an attachment, or htmx swaps binary into the page."""
+    """Every file endpoint must be an attachment, or the browser renders bytes."""
     make_record(daniel, worker, dt.date.today())
     client.force_login(manager)
 
@@ -136,7 +136,7 @@ def test_record_pdf_is_an_attachment(client, db, daniel, worker):
     record = make_record(daniel, worker, dt.date(2026, 8, 12))
     client.force_login(worker)
 
-    response = client.get(reverse("record_pdf", args=[record.pk]))
+    response = client.get(reverse("api:record-pdf", args=[record.pk]))
     assert response["Content-Type"] == "application/pdf"
     assert response["Content-Disposition"].startswith("attachment;")
 
@@ -145,6 +145,6 @@ def test_participant_book_is_an_attachment(client, db, daniel, worker):
     make_record(daniel, worker, dt.date(2026, 8, 12))
     client.force_login(worker)
 
-    response = client.get(reverse("participant_book", args=[daniel.pk]))
+    response = client.get(reverse("api:participant-book", args=[daniel.pk]))
     assert response["Content-Type"] == "application/pdf"
     assert response["Content-Disposition"].startswith("attachment;")

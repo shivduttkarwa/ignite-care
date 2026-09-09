@@ -7,20 +7,36 @@ compiled from those PDFs on demand.
 
 ## Stack
 
-Python 3.12, Django 5.2 LTS, PostgreSQL in production and SQLite in
-development. Django templates with HTMX and Alpine.js vendored locally, and no
-build pipeline. WeasyPrint renders the PDFs and pypdf compiles the books.
-django-simple-history keeps record history, django-otp provides TOTP two-factor
-and django-axes handles lockout.
+The front end and the back end are separate programs that speak JSON.
 
-Total front-end payload is about 180KB including self-hosted Barlow.
+**Back end** - Python 3.12, Django 5.2 LTS with Django REST Framework,
+PostgreSQL in production and SQLite in development. It serves `/api/` and
+nothing else: no HTML pages, no templates except the print layouts. WeasyPrint
+renders the PDFs and pypdf compiles the books. django-simple-history keeps
+record history, django-otp provides TOTP two-factor and django-axes handles
+lockout.
+
+**Front end** - React 18 with TypeScript, Vite, React Router and TanStack Query.
+Native CSS in ITCSS layers with BEM naming; no preprocessor, no utility
+framework. Fonts are self-hosted Barlow.
+
+Sign-in uses a **session cookie, not a token**. The cookie is `httpOnly`, so no
+script can read it and a cross-site script cannot walk off with a credential -
+which matters more here than usual, because this is health data. That works
+because in production both halves are served from **one origin**: Caddy serves
+the built React files at `/` and reverse-proxies `/api` to gunicorn. One box,
+one certificate, one cookie. A future native app authenticates with a token
+instead, which DRF can issue alongside the session without changing anything the
+web client does.
 
 ## The four decisions the design rests on
 
 **Forms are data, not code.** Each form is a versioned JSON schema in
-`forms/schemas/`. One renderer draws the web form, one template draws the PDF.
-Adding the Bowel Chart is a new schema plus a print template, not a new model,
-migration, view and set of templates.
+`forms/schemas/`, served over the API at `/api/schemas/<key>/<version>/`. React
+draws the web form from it; a Django template draws the PDF from it. Adding the
+Bowel Chart is a new schema plus a print template - no new model, migration,
+view or screen. A future native app reads the same schema and gets the same form
+for free.
 
 **Answers are hybrid.** They live in a `JSONField`, but the fields the client
 filters and reports on — physio, shower, bowel, urine, fluids — are promoted to
@@ -46,7 +62,7 @@ participant can have up to three records a day, one per shift.
 
 ## Local setup
 
-Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.12, [uv](https://docs.astral.sh/uv/) and Node 20.
 
 ```bash
 uv venv --python 3.12 .venv
@@ -54,20 +70,46 @@ uv sync
 cp .env.example .env
 .venv/Scripts/python manage.py migrate
 .venv/Scripts/python manage.py seed_demo --days 12
-.venv/Scripts/python manage.py runserver
+.venv/Scripts/python manage.py runserver 127.0.0.1:8811
 ```
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open **http://127.0.0.1:5173**. That is the app. Vite proxies `/api` and
+`/media` through to Django on 8811, so the browser sees one origin in
+development too and the session cookie behaves exactly as it will in production.
+
+Django on 8811 answers only `/api/` and `/django-admin/`. Opening its root
+returns 404, which is correct.
+
+### Production
+
+One machine. `npm run build` produces `frontend/dist`; Caddy serves that at `/`
+with an SPA fallback and proxies `/api` to gunicorn. Two processes, one origin,
+one certificate - not two servers.
 
 ### Testing on a phone
 
-Run the server on every interface and open the machine's LAN address from a
-device on the same wi-fi:
+Both processes have to listen on the LAN, not just on loopback:
 
 ```bash
 .venv/Scripts/python manage.py runserver 0.0.0.0:8811
+cd frontend && npm run dev -- --host 0.0.0.0
 ```
 
+Then open `http://<machine-ip>:5173` from a device on the same wi-fi.
 `config/settings/local.py` sets `ALLOWED_HOSTS = ["*"]` for this. It is a
 development-only file; `production.py` still requires an explicit host list.
+
+Guest and hotel wi-fi usually has client isolation switched on, which stops
+devices reaching each other whatever the firewall says. If the phone cannot load
+the page, rule that out first.
 
 Note that `http://` on a LAN IP is not a secure context, so the browser will not
 offer to install the PWA. To test the installed app, forward the port over USB
@@ -94,34 +136,39 @@ Password for every account is `ignite-demo-2026`.
 ## Tests
 
 ```bash
-.venv/Scripts/python -m pytest
+.venv/Scripts/python -m pytest      # back end
+cd frontend && npx tsc --noEmit     # front end types
 ```
 
-44 tests cover the things that must not break: shift date attribution across
+52 tests cover the things that must not break: shift date attribution across
 midnight, conditional visibility and validation in the schema engine, submission
 locking a record and storing its PDF, hidden answers never being persisted,
 promoted columns tracking the answers, a worker in one home being unable to
-reach a participant in another, book compilation, the exports, role-correct
-dashboards, and every screen rendering for the roles allowed to see it.
+reach a participant in another, the participants list reporting the current
+shift's state so nobody is recorded twice, book compilation, exports carrying
+exactly the rows the screen showed, and role-correct dashboards.
 
 ## Layout
 
 ```
-config/settings/     base.py -> local.py and production.py
-apps/people/         Home, Participant, ConditionTag, StaffProfile, both dashboards
-apps/records/        CareRecord, schema engine, shift services, record views
-apps/notices/        Notice and read tracking
-apps/pdfgen/         WeasyPrint rendering and book compilation
-apps/exports/        manager records screen, drawer, CSV and XLSX
-forms/schemas/       versioned form definitions
-templates/layouts/   app.html, the one frame both roles use
-templates/pdf/       print layouts, one per schema version
-static/css/          ITCSS layers with BEM naming, no preprocessor
-static/img/          logo and icons derived from the Ignite brand mark
+config/settings/         base.py -> local.py and production.py
+apps/api/                the whole HTTP surface: views, serializers, auth, exports
+apps/people/             Home, Participant, ConditionTag, StaffProfile
+apps/records/            CareRecord, schema engine, shift services, filters
+apps/notices/            Notice and read tracking
+apps/pdfgen/             WeasyPrint rendering and book compilation
+forms/schemas/           versioned form definitions
+templates/pdf/           print layouts, one per schema version
+
+frontend/src/api/        typed fetch client and the API's type surface
+frontend/src/screens/    one file per screen
+frontend/src/components/ the app frame and the shared pieces
+frontend/src/styles/     ITCSS layers with BEM naming, no preprocessor
+frontend/public/         logo, icons and fonts
 ```
 
 Django admin is a superuser back door for data repair only. Every screen the
-client sees is built to the approved design.
+client sees is React, built to the approved design.
 
 ## Interface
 
@@ -131,6 +178,10 @@ dashboards gain a right-hand rail. The records table becomes one labelled card
 per record below 64em rather than scrolling sideways, and participant rows
 collapse from a card to a single line using container queries, so they reflow to
 the panel they sit in rather than to the viewport.
+
+Manager-only screens are refused by the API and redirected by the router, so a
+support worker who types or bookmarks `/records` lands back on their own shift
+rather than on an error.
 
 Support workers get Today's shift, Participants and Notices. Managers get a
 service overview with completion by property, an outstanding queue, recent
@@ -154,4 +205,6 @@ brand JPG and served as WebP, with PNG app icons generated from the flame mark.
 - **Create and edit screens** for participants, care workers, properties and
   notices. The list and detail screens exist; adding and editing is still
   Django admin.
+- **PDF preview screen** (screen 6 of the approved design). The PDF downloads;
+  previewing it in the browser before saving does not exist yet.
 - **Two-factor enrolment screens.** django-otp is installed and wired.

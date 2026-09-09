@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTMX, Plainly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+  :root {
+    --ink: #0e2129;
+    --ink-2: #3d545d;
+    --ink-3: #6c848d;
+    --paper: #eef2f3;
+    --surface: #ffffff;
+    --surface-2: #f6f9fa;
+    --line: #d7e0e3;
+    --line-soft: #e7edef;
+    --teal: #115e74;
+    --teal-soft: #e2eff3;
+    --magenta: #a8234f;
+    --magenta-soft: #fae7ee;
+    --amber: #8a6100;
+    --amber-soft: #fdf3d9;
+    --green: #3f7d20;
+    --green-soft: #e9f3e2;
+
+    --code-bg: #0e2129;
+    --code-ink: #dce7ea;
+    --code-tag: #7fd0e8;
+    --code-attr: #f3b96a;
+    --code-val: #a8dd8a;
+    --code-cm: #7d949c;
+
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Source Serif 4", georgia, "Times New Roman", serif;
+    --mono: "JetBrains Mono", ui-monospace, consolas, monospace;
+    --measure: 66ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e6eef1; --ink-2: #a9bdc4; --ink-3: #7d949c;
+      --paper: #0a1519; --surface: #101f25; --surface-2: #14262d;
+      --line: #233b44; --line-soft: #1b2f36;
+      --teal: #63b6d0; --teal-soft: #12313d;
+      --magenta: #ef7ba3; --magenta-soft: #3a1522;
+      --amber: #e0b44e; --amber-soft: #33280d;
+      --green: #8dc96a; --green-soft: #1c2d15;
+      --code-bg: #071216; --code-ink: #dce7ea;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #e6eef1; --ink-2: #a9bdc4; --ink-3: #7d949c;
+    --paper: #0a1519; --surface: #101f25; --surface-2: #14262d;
+    --line: #233b44; --line-soft: #1b2f36;
+    --teal: #63b6d0; --teal-soft: #12313d;
+    --magenta: #ef7ba3; --magenta-soft: #3a1522;
+    --amber: #e0b44e; --amber-soft: #33280d;
+    --green: #8dc96a; --green-soft: #1c2d15;
+    --code-bg: #071216; --code-ink: #dce7ea;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 62rem; margin-inline: auto; padding: 0 1.25rem 6rem; }
+
+  .masthead { padding: 3.5rem 0 2rem; border-bottom: 2px solid var(--ink); margin-bottom: 2.5rem; }
+  .masthead__eyebrow {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--teal); margin-bottom: .75rem;
+  }
+  .masthead h1 {
+    font-family: var(--display); font-size: clamp(2.75rem, 8vw, 4.5rem);
+    font-weight: 700; line-height: .95; text-wrap: balance;
+  }
+  .masthead p { margin-top: 1rem; max-width: 46ch; color: var(--ink-2); font-size: 1.125rem; }
+
+  section { margin-bottom: 4rem; scroll-margin-top: 1.5rem; }
+
+  h2.part {
+    font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.6rem);
+    font-weight: 700; line-height: 1.05; padding-bottom: .6rem;
+    border-bottom: 1px solid var(--ink); margin-bottom: 1.5rem; text-wrap: balance;
+  }
+  h2.part .num {
+    font-family: var(--mono); font-size: .75rem; font-weight: 400; color: var(--teal);
+    vertical-align: .9em; margin-right: .6rem; letter-spacing: .1em;
+  }
+
+  h3 { font-family: var(--display); font-size: 1.5rem; font-weight: 600; margin: 2.25rem 0 .6rem; text-wrap: balance; }
+
+  p, ul, ol { max-width: var(--measure); }
+  p + p { margin-top: .9rem; }
+  ul, ol { padding-left: 1.15rem; margin-top: .7rem; display: grid; gap: .45rem; }
+  li::marker { color: var(--ink-3); }
+  a { color: var(--teal); }
+  strong { font-weight: 600; }
+
+  code {
+    font-family: var(--mono); font-size: .82em; background: var(--surface-2);
+    border: 1px solid var(--line-soft); padding: .08em .34em; border-radius: 2px;
+  }
+
+  /* Code panel ---------------------------------------------------------- */
+  pre {
+    font-family: var(--mono); font-size: .8rem; line-height: 1.75;
+    background: var(--code-bg); color: var(--code-ink);
+    padding: .95rem 1.1rem; overflow-x: auto; margin: 0;
+    border-radius: 3px;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+  .t { color: var(--code-tag); }
+  .a { color: var(--code-attr); }
+  .v { color: var(--code-val); }
+  .c { color: var(--code-cm); font-style: italic; }
+  .hl { background: rgba(127, 208, 232, .15); border-radius: 2px; padding: .05em .2em; margin: -.05em -.2em; }
+
+  /* Example block ------------------------------------------------------- */
+  .eg { margin: 1.75rem 0; border: 1px solid var(--line); background: var(--surface); }
+
+  .eg__head {
+    display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap;
+    padding: .85rem 1.1rem; border-bottom: 1px solid var(--line);
+  }
+  .eg__n {
+    font-family: var(--mono); font-size: .62rem; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--teal);
+  }
+  .eg__title { font-family: var(--display); font-size: 1.25rem; font-weight: 600; }
+
+  .eg__grid { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 54rem) { .eg__grid { grid-template-columns: 1fr 1fr; } }
+
+  .eg__pane { padding: 1.1rem; border-top: 1px solid var(--line-soft); min-width: 0; }
+  @media (min-width: 54rem) {
+    .eg__pane:nth-child(odd) { border-right: 1px solid var(--line-soft); }
+  }
+
+  .eg__label {
+    font-family: var(--mono); font-size: .6rem; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: .6rem;
+  }
+
+  .eg__note {
+    max-width: none;
+    padding: .9rem 1.1rem;
+    border-top: 1px solid var(--line-soft);
+    background: var(--surface-2);
+    font-size: .97rem;
+    color: var(--ink-2);
+  }
+  .eg__note b { color: var(--ink); font-weight: 600; }
+
+  /* Fake browser -------------------------------------------------------- */
+  .screen { border: 1px solid var(--line); border-radius: 3px; background: var(--surface); overflow: hidden; }
+  .screen__bar { display: flex; gap: .3rem; padding: .5rem .6rem; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); }
+  .screen__dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--line); }
+  .screen__body { padding: .9rem; font-size: .92rem; display: grid; gap: .55rem; }
+
+  .btn-demo {
+    display: inline-block; padding: .4rem .8rem; background: var(--teal); color: #fff;
+    border-radius: 3px; font-family: var(--display); font-size: .95rem; font-weight: 600;
+  }
+  .input-demo {
+    border: 1px solid var(--line); border-radius: 3px; padding: .4rem .6rem;
+    font-family: var(--body); font-size: .9rem; color: var(--ink-3); background: var(--surface);
+  }
+  .row-demo {
+    display: flex; justify-content: space-between; align-items: center; gap: .75rem;
+    padding: .45rem .6rem; border: 1px solid var(--line-soft); border-radius: 3px; font-size: .88rem;
+  }
+  .row-demo--gone { opacity: .32; text-decoration: line-through; }
+  .arrow-down { text-align: center; color: var(--teal); font-family: var(--mono); font-size: 1rem; }
+
+  /* Notes --------------------------------------------------------------- */
+  .note {
+    border-left: 3px solid var(--teal); background: var(--surface);
+    padding: 1rem 1.25rem; margin: 1.5rem 0; max-width: var(--measure); font-size: 1rem;
+  }
+  .note--why { border-left-color: var(--magenta); }
+  .note--watch { border-left-color: var(--amber); }
+  .note__label {
+    font-family: var(--mono); font-size: .64rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--teal); display: block; margin-bottom: .3rem;
+  }
+  .note--why .note__label { color: var(--magenta); }
+  .note--watch .note__label { color: var(--amber); }
+
+  /* Four questions ------------------------------------------------------ */
+  .q { display: grid; gap: 0; margin: 1.5rem 0; max-width: var(--measure); }
+  .q__row {
+    display: grid; grid-template-columns: 1.6rem minmax(0, 1fr);
+    gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--line-soft);
+  }
+  .q .q__row:last-child { border-bottom: 1px solid var(--line-soft); }
+  .q__n { font-family: var(--mono); font-size: .8rem; color: var(--teal); padding-top: .3rem; }
+  .q__ask { font-family: var(--display); font-size: 1.25rem; font-weight: 600; display: block; }
+  .q__attr {
+    font-family: var(--mono); font-size: .78rem; color: var(--teal);
+    background: var(--teal-soft); padding: .1em .4em; border-radius: 2px; display: inline-block; margin-top: .3rem;
+  }
+  .q p { max-width: none; font-size: 1rem; color: var(--ink-2); margin-top: .3rem; }
+
+  .tablewrap { overflow-x: auto; margin: 1.5rem 0; border: 1px solid var(--line); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; min-width: 30rem; }
+  th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: .64rem; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td code { background: none; border: 0; padding: 0; }
+
+  figure { margin: 2rem 0; padding: 1.5rem; background: var(--surface); border: 1px solid var(--line); }
+  figure svg { width: 100%; height: auto; display: block; color: var(--ink); }
+  .scroll-x { overflow-x: auto; }
+  .scroll-x svg { min-width: 30rem; }
+  figcaption {
+    margin-top: 1.1rem; padding-top: .85rem; border-top: 1px solid var(--line-soft);
+    font-size: .92rem; color: var(--ink-2); max-width: var(--measure);
+  }
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  footer {
+    margin-top: 5rem; padding-top: 1.5rem; border-top: 2px solid var(--ink);
+    font-family: var(--mono); font-size: .75rem; color: var(--ink-3);
+    display: flex; flex-wrap: wrap; gap: .5rem 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="masthead__eyebrow">A primer · companion to the architecture notes</p>
+  <h1>HTMX, plainly</h1>
+  <p>One idea, four attributes, five examples. If you can write HTML, you already know most of this.</p>
+</header>
+
+<div class="note note--watch">
+  <span class="note__label">Read this as background, not as a description of the portal</span>
+  The Ignite portal no longer uses HTMX. It was decoupled into a React front end and a JSON API, so
+  there are no server-rendered pages left to swap. This primer is kept because the idea is worth
+  knowing and it is the right tool for plenty of other jobs — but for how the portal actually works
+  today, see <a href="architecture.html">the architecture notes</a>.
+</div>
+
+<!-- 1 -------------------------------------------------------------------- -->
+<section id="idea">
+  <h2 class="part"><span class="num">01</span>The one idea</h2>
+
+  <p>In plain HTML, only two things can talk to the server: a <strong>link</strong> and a <strong>form</strong>. And both do the same blunt thing with the answer — throw away the entire page and replace it.</p>
+
+  <p>That is the whole limitation. Not that HTML is weak, but that it is <em>restricted</em>: only two elements may ask, only one thing may happen to the reply.</p>
+
+  <p>HTMX removes both restrictions. That is genuinely all it does.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th style="width:11rem">Question</th><th>Plain HTML</th><th>With HTMX</th></tr></thead>
+      <tbody>
+        <tr><td><b>What can ask the server?</b></td><td>Links and forms only</td><td>Any element — a button, a div, a table row</td></tr>
+        <tr><td><b>When does it ask?</b></td><td>On click, or on submit</td><td>Any event — typing, hovering, every 5 seconds</td></tr>
+        <tr><td><b>Where does the answer go?</b></td><td>The whole page, always</td><td>Any element you name</td></tr>
+        <tr><td><b>How does it go in?</b></td><td>Replaces everything</td><td>Replace, append, prepend, or delete</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note note--why">
+    <span class="note__label">The part that surprises everyone</span>
+    The server sends back <strong>HTML</strong>, not JSON. There is no data to convert, no template to render in the browser, no state to keep in sync. The server sends a finished chunk of page and HTMX puts it where you said. That single decision is why there is no build step and no second codebase.
+  </div>
+</section>
+
+<!-- 2 -------------------------------------------------------------------- -->
+<section id="four">
+  <h2 class="part"><span class="num">02</span>Four questions, four attributes</h2>
+
+  <p>Every HTMX attribute answers one of four questions. Learn these and you have learned the library — the rest is detail.</p>
+
+  <div class="q">
+    <div class="q__row">
+      <span class="q__n">1</span>
+      <div>
+        <span class="q__ask">What sets it off?</span>
+        <span class="q__attr">hx-trigger="click"</span>
+        <p>A click, a keystroke, the mouse entering, a timer. If you leave it out, HTMX guesses sensibly: a button uses click, an input uses change.</p>
+      </div>
+    </div>
+    <div class="q__row">
+      <span class="q__n">2</span>
+      <div>
+        <span class="q__ask">Where does it go, and how?</span>
+        <span class="q__attr">hx-get="/url"</span>
+        <p>Also <code>hx-post</code>, <code>hx-put</code>, <code>hx-delete</code>. Same verbs a form already has, now available on anything.</p>
+      </div>
+    </div>
+    <div class="q__row">
+      <span class="q__n">3</span>
+      <div>
+        <span class="q__ask">Where does the answer land?</span>
+        <span class="q__attr">hx-target="#results"</span>
+        <p>Any CSS selector. Leave it out and the answer replaces the element that asked.</p>
+      </div>
+    </div>
+    <div class="q__row">
+      <span class="q__n">4</span>
+      <div>
+        <span class="q__ask">How does it land?</span>
+        <span class="q__attr">hx-swap="innerHTML"</span>
+        <p>Fill it, replace it, add to the end, add to the start, or delete it. <code>innerHTML</code> is the default and is usually what you want.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>Read any HTMX attribute as a sentence and it makes sense: <em>"when this is clicked, GET this URL, and put the answer inside that element."</em></p>
+</section>
+
+<!-- 3 -------------------------------------------------------------------- -->
+<section id="examples">
+  <h2 class="part"><span class="num">03</span>Five examples, smallest first</h2>
+
+  <!-- Example 1 -->
+  <div class="eg">
+    <div class="eg__head">
+      <span class="eg__n">Example 1</span>
+      <span class="eg__title">A button that loads something</span>
+    </div>
+    <div class="eg__grid">
+      <div class="eg__pane">
+        <span class="eg__label">What you write</span>
+<pre><code>&lt;<span class="t">button</span> <span class="a hl">hx-get</span>=<span class="v">"/notices"</span>
+        <span class="a hl">hx-target</span>=<span class="v">"#panel"</span>&gt;
+  Show notices
+&lt;/<span class="t">button</span>&gt;
+
+&lt;<span class="t">div</span> <span class="a">id</span>=<span class="v">"panel"</span>&gt;&lt;/<span class="t">div</span>&gt;</code></pre>
+      </div>
+      <div class="eg__pane">
+        <span class="eg__label">What the server sends back</span>
+<pre><code><span class="c">&lt;!-- just HTML. no JSON. --&gt;</span>
+&lt;<span class="t">p</span>&gt;Grocery delivery moved&lt;/<span class="t">p</span>&gt;
+&lt;<span class="t">p</span>&gt;New sensor mat installed&lt;/<span class="t">p</span>&gt;</code></pre>
+        <div style="margin-top:.9rem">
+          <span class="eg__label">What the user sees</span>
+          <div class="screen">
+            <div class="screen__bar"><span class="screen__dot"></span><span class="screen__dot"></span><span class="screen__dot"></span></div>
+            <div class="screen__body">
+              <span class="btn-demo">Show notices</span>
+              <div style="border-top:1px dashed var(--line);padding-top:.5rem;color:var(--ink-2)">
+                Grocery delivery moved<br>New sensor mat installed
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="eg__note"><b>Read it as a sentence:</b> when this button is clicked, GET <code>/notices</code>, and put the answer inside <code>#panel</code>. No JavaScript was written. The page never reloaded.</p>
+  </div>
+
+  <!-- Example 2 -->
+  <div class="eg">
+    <div class="eg__head">
+      <span class="eg__n">Example 2</span>
+      <span class="eg__title">Search that updates as you type</span>
+    </div>
+    <div class="eg__grid">
+      <div class="eg__pane">
+        <span class="eg__label">What you write</span>
+<pre><code>&lt;<span class="t">input</span> <span class="a">type</span>=<span class="v">"search"</span> <span class="a">name</span>=<span class="v">"q"</span>
+       <span class="a hl">hx-get</span>=<span class="v">"/participants/search"</span>
+       <span class="a hl">hx-trigger</span>=<span class="v">"keyup changed delay:300ms"</span>
+       <span class="a hl">hx-target</span>=<span class="v">"#results"</span>&gt;
+
+&lt;<span class="t">div</span> <span class="a">id</span>=<span class="v">"results"</span>&gt;&lt;/<span class="t">div</span>&gt;</code></pre>
+      </div>
+      <div class="eg__pane">
+        <span class="eg__label">What the user sees</span>
+        <div class="screen">
+          <div class="screen__bar"><span class="screen__dot"></span><span class="screen__dot"></span><span class="screen__dot"></span></div>
+          <div class="screen__body">
+            <div class="input-demo">dan|</div>
+            <div style="color:var(--ink-2);font-size:.86rem">
+              Daniel Reeves &middot; Room 2<br>
+              <span style="color:var(--ink-3)">1 match</span>
+            </div>
+          </div>
+        </div>
+        <p style="margin-top:.9rem;font-size:.92rem;color:var(--ink-2)">The input's own <code>name="q"</code> is sent automatically. You never touch a query string.</p>
+      </div>
+    </div>
+    <p class="eg__note"><b>The clever bit is <code>delay:300ms</code>.</b> It waits until typing pauses before asking, so a five-letter name is one request, not five. Doing that by hand in JavaScript is called debouncing and takes about fifteen lines. Here it is one word.</p>
+  </div>
+
+  <!-- Example 3 -->
+  <div class="eg">
+    <div class="eg__head">
+      <span class="eg__n">Example 3</span>
+      <span class="eg__title">Deleting a row, in place</span>
+    </div>
+    <div class="eg__grid">
+      <div class="eg__pane">
+        <span class="eg__label">What you write</span>
+<pre><code>&lt;<span class="t">tr</span>&gt;
+  &lt;<span class="t">td</span>&gt;Daniel Reeves&lt;/<span class="t">td</span>&gt;
+  &lt;<span class="t">td</span>&gt;
+    &lt;<span class="t">button</span> <span class="a hl">hx-delete</span>=<span class="v">"/record/12"</span>
+            <span class="a hl">hx-target</span>=<span class="v">"closest tr"</span>
+            <span class="a hl">hx-swap</span>=<span class="v">"outerHTML"</span>
+            <span class="a hl">hx-confirm</span>=<span class="v">"Delete this?"</span>&gt;
+      Delete
+    &lt;/<span class="t">button</span>&gt;
+  &lt;/<span class="t">td</span>&gt;
+&lt;/<span class="t">tr</span>&gt;</code></pre>
+      </div>
+      <div class="eg__pane">
+        <span class="eg__label">What the user sees</span>
+        <div class="screen">
+          <div class="screen__bar"><span class="screen__dot"></span><span class="screen__dot"></span><span class="screen__dot"></span></div>
+          <div class="screen__body">
+            <div class="row-demo"><span>Grace Tuilagi</span><span style="color:var(--teal)">Delete</span></div>
+            <div class="row-demo row-demo--gone"><span>Daniel Reeves</span><span>Delete</span></div>
+            <div class="arrow-down">&darr;</div>
+            <div class="row-demo"><span>Grace Tuilagi</span><span style="color:var(--teal)">Delete</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="eg__note"><b>Three things worth noticing.</b> <code>closest tr</code> means "the table row this button sits in" — no ids needed. <code>hx-confirm</code> pops a confirmation with no JavaScript. And the server replies with nothing at all, which combined with <code>outerHTML</code> means the row simply vanishes.</p>
+  </div>
+
+  <!-- Example 4 -->
+  <div class="eg">
+    <div class="eg__head">
+      <span class="eg__n">Example 4</span>
+      <span class="eg__title">A number that keeps itself up to date</span>
+    </div>
+    <div class="eg__grid">
+      <div class="eg__pane">
+        <span class="eg__label">What you write</span>
+<pre><code>&lt;<span class="t">span</span> <span class="a hl">hx-get</span>=<span class="v">"/outstanding-count"</span>
+      <span class="a hl">hx-trigger</span>=<span class="v">"every 30s"</span>&gt;
+  2
+&lt;/<span class="t">span</span>&gt;</code></pre>
+        <p style="margin-top:.9rem;font-size:.92rem;color:var(--ink-2)">No target given, so the answer replaces what is inside the span itself.</p>
+      </div>
+      <div class="eg__pane">
+        <span class="eg__label">What the user sees</span>
+        <div class="screen">
+          <div class="screen__bar"><span class="screen__dot"></span><span class="screen__dot"></span><span class="screen__dot"></span></div>
+          <div class="screen__body">
+            <div style="font-family:var(--display);font-size:1.1rem;font-weight:600">Outstanding <span style="background:var(--amber-soft);color:var(--amber);padding:.05em .45em;border-radius:2px">2</span></div>
+            <div style="color:var(--ink-3);font-size:.84rem">refreshes itself every 30 seconds</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="eg__note"><b>Polling in one attribute.</b> A manager leaves the dashboard open all shift and the outstanding count keeps itself current, without a websocket, a framework, or a line of JavaScript.</p>
+  </div>
+
+  <!-- Example 5 -->
+  <div class="eg">
+    <div class="eg__head">
+      <span class="eg__n">Example 5</span>
+      <span class="eg__title">The whole site, in one attribute</span>
+    </div>
+    <div class="eg__grid">
+      <div class="eg__pane">
+        <span class="eg__label">What you write</span>
+<pre><code>&lt;<span class="t">body</span> <span class="a hl">hx-boost</span>=<span class="v">"true"</span>&gt;
+
+  <span class="c">&lt;!-- every link and form below --&gt;</span>
+  <span class="c">&lt;!-- is now handled by htmx     --&gt;</span>
+
+  &lt;<span class="t">a</span> <span class="a">href</span>=<span class="v">"/participants/"</span>&gt;Participants&lt;/<span class="t">a</span>&gt;
+  &lt;<span class="t">a</span> <span class="a">href</span>=<span class="v">"/records/"</span>&gt;Records&lt;/<span class="t">a</span>&gt;
+
+&lt;/<span class="t">body</span>&gt;</code></pre>
+      </div>
+      <div class="eg__pane">
+        <span class="eg__label">What changes</span>
+        <p style="font-size:.97rem;color:var(--ink-2);max-width:none">Those links look completely ordinary, and they still work if JavaScript fails. But when it is running, clicking one no longer reloads the page — HTMX fetches it and swaps in the new body.</p>
+        <p style="margin-top:.7rem;font-size:.97rem;color:var(--ink-2);max-width:none">The stylesheet stays loaded. The fonts stay loaded. Nothing flashes white.</p>
+        <p style="margin-top:.7rem;font-size:.92rem;color:var(--ink-3);max-width:none">This is the one being used on the care portal. Measured: 67&ndash;106&nbsp;ms per page, zero full reloads.</p>
+      </div>
+    </div>
+    <p class="eg__note"><b>This is the same idea as examples 1 to 4</b>, just applied automatically to every link instead of one element at a time. Nothing new to learn.</p>
+  </div>
+</section>
+
+<!-- 4 -------------------------------------------------------------------- -->
+<section id="vs">
+  <h2 class="part"><span class="num">04</span>How this differs from React</h2>
+
+  <p>Both give you a page that updates without reloading. They disagree about <em>where the HTML gets made</em>, and everything else follows from that.</p>
+
+  <figure>
+    <div class="scroll-x">
+      <svg viewBox="0 0 820 250" role="img" aria-label="React sends JSON which the browser turns into HTML, while HTMX sends finished HTML that is placed directly into the page.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <text x="8" y="20" font-size="10" fill="currentColor" opacity=".65" font-family="sans-serif">THE REACT WAY</text>
+
+        <rect x="8" y="30" width="124" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="70" y="61" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">Server</text>
+
+        <line x1="132" y1="56" x2="196" y2="56" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar)"/>
+        <text x="164" y="48" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".8" font-family="sans-serif">JSON</text>
+
+        <rect x="198" y="30" width="150" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="273" y="55" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">React, in the browser</text>
+        <text x="273" y="70" text-anchor="middle" font-size="9.5" fill="currentColor" opacity=".7" font-family="sans-serif">turns data into HTML</text>
+
+        <line x1="348" y1="56" x2="412" y2="56" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar)"/>
+        <rect x="414" y="30" width="124" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="476" y="61" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">The page</text>
+
+        <text x="556" y="48" font-size="10" fill="currentColor" opacity=".75" font-family="sans-serif">Templates live in the browser.</text>
+        <text x="556" y="64" font-size="10" fill="currentColor" opacity=".75" font-family="sans-serif">Needs a build step.</text>
+        <text x="556" y="80" font-size="10" fill="currentColor" opacity=".75" font-family="sans-serif">Two codebases to keep in step.</text>
+
+        <line x1="8" y1="112" x2="812" y2="112" stroke="currentColor" stroke-width="1" opacity=".25"/>
+
+        <text x="8" y="140" font-size="10" fill="#115e74" font-family="sans-serif">THE HTMX WAY</text>
+
+        <rect x="8" y="150" width="124" height="52" rx="3" fill="#115e74" stroke="#115e74"/>
+        <text x="70" y="175" text-anchor="middle" font-size="12" font-weight="600" fill="#fff" font-family="sans-serif">Server</text>
+        <text x="70" y="190" text-anchor="middle" font-size="9.5" fill="#fff" opacity=".85" font-family="sans-serif">makes the HTML</text>
+
+        <line x1="132" y1="176" x2="412" y2="176" stroke="#115e74" stroke-width="1.3" marker-end="url(#ar)"/>
+        <text x="272" y="168" text-anchor="middle" font-size="9.5" fill="#115e74" font-family="sans-serif">finished HTML — nothing to convert</text>
+
+        <rect x="414" y="150" width="124" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+        <text x="476" y="181" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor" font-family="sans-serif">The page</text>
+
+        <text x="556" y="168" font-size="10" fill="currentColor" opacity=".75" font-family="sans-serif">Templates stay on the server.</text>
+        <text x="556" y="184" font-size="10" fill="currentColor" opacity=".75" font-family="sans-serif">No build step.</text>
+        <text x="556" y="200" font-size="10" fill="currentColor" opacity=".75" font-family="sans-serif">One codebase.</text>
+      </svg>
+    </div>
+    <figcaption><b>The whole disagreement in one picture.</b> React moves the templating into the browser, which is powerful and costs you a build pipeline and a second codebase. HTMX leaves it on the server, which is simpler and costs you a network round trip per interaction.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="note__label">A fair summary</span>
+    React is the right answer when the browser genuinely needs to <em>own</em> some state — a drag-and-drop planner, a spreadsheet, a drawing tool, anything that must work offline. HTMX is the right answer when the server already knows everything and the browser just needs to show it. Forms and lists — most business software, in other words — sit firmly in the second group.
+  </div>
+</section>
+
+<!-- 5 -------------------------------------------------------------------- -->
+<section id="honest">
+  <h2 class="part"><span class="num">05</span>When not to use it</h2>
+
+  <p>Every honest tool description includes this section.</p>
+
+  <ul>
+    <li><strong>When it must work offline.</strong> Every HTMX interaction is a request. No connection, no update. A client-side app can keep working from data it already holds.</li>
+    <li><strong>When the interaction must be instant and continuous.</strong> Dragging, resizing, drawing, a canvas. A round trip per frame is obviously wrong.</li>
+    <li><strong>When one change updates six places at once.</strong> Doable with HTMX, but this is where a framework's state management genuinely earns its keep.</li>
+    <li><strong>When there is already a mobile app sharing an API.</strong> If a JSON API must exist anyway, having the web app use it too is reasonable.</li>
+  </ul>
+
+  <div class="note note--watch">
+    <span class="note__label">Three things that catch people out</span>
+    <p style="max-width:none"><strong>Analytics stops recording.</strong> Google Analytics fires on page load, and boosted navigation has none — you must fire it yourself on <code>htmx:afterSettle</code>.</p>
+    <p style="margin-top:.6rem;max-width:none"><strong>Third-party widgets stop initialising.</strong> Sliders and embeds scan the page once on load. Re-run them on <code>htmx:load</code>.</p>
+    <p style="margin-top:.6rem;max-width:none"><strong>Downloads must opt out.</strong> Add <code>hx-boost="false"</code> to any link returning a file, or HTMX will helpfully swap a spreadsheet's raw binary into your page. This genuinely happened on the care portal.</p>
+  </div>
+</section>
+
+<!-- 6 -------------------------------------------------------------------- -->
+<section id="cheatsheet">
+  <h2 class="part"><span class="num">06</span>The whole cheat sheet</h2>
+
+  <p>This is very nearly all of HTMX. There is more, but you can build a great deal with only this.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th style="width:13rem">Attribute</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>hx-get</code> <code>hx-post</code></td><td>Ask the server, using that method. Also <code>hx-put</code>, <code>hx-patch</code>, <code>hx-delete</code>.</td></tr>
+        <tr><td><code>hx-trigger</code></td><td>What sets it off. <code>click</code>, <code>keyup</code>, <code>every 30s</code>, <code>load</code>, <code>revealed</code>.</td></tr>
+        <tr><td><code>hx-target</code></td><td>Where the answer lands. Any selector, or <code>closest tr</code>, <code>next div</code>.</td></tr>
+        <tr><td><code>hx-swap</code></td><td>How it lands. <code>innerHTML</code>, <code>outerHTML</code>, <code>beforeend</code>, <code>delete</code>.</td></tr>
+        <tr><td><code>hx-boost</code></td><td>Apply all of the above automatically to every link and form.</td></tr>
+        <tr><td><code>hx-confirm</code></td><td>Ask "are you sure?" first.</td></tr>
+        <tr><td><code>hx-indicator</code></td><td>Show a spinner while waiting.</td></tr>
+        <tr><td><code>hx-select</code></td><td>Take only part of the response and ignore the rest.</td></tr>
+        <tr><td><code>hx-preserve</code></td><td>Keep this element untouched across a swap.</td></tr>
+        <tr><td><code>hx-vals</code></td><td>Send extra values along with the request.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Getting it onto a page</h3>
+
+<pre><code>&lt;<span class="t">script</span> <span class="a">src</span>=<span class="v">"/static/js/htmx.min.js"</span> <span class="a">defer</span>&gt;&lt;/<span class="t">script</span>&gt;</code></pre>
+
+  <p style="margin-top:.9rem">One file, about 14&nbsp;KB. No installation, no build, no configuration. Drop it in a Django template, a Wagtail base template, a WordPress header, or a plain HTML file, and every attribute above starts working.</p>
+</section>
+
+<footer>
+  <span>HTMX primer</span>
+  <span>Companion to architecture.html</span>
+  <span>Ignite support worker portal</span>
+</footer>
+
+</div>
+</body>
+</html>

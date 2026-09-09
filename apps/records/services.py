@@ -46,6 +46,14 @@ def records_for_shift(home, service_date, shift):
     return {row.participant_id: row for row in rows}
 
 
+def records_for_participants(participants, service_date, shift):
+    """The same lookup across several homes at once, for the participants list."""
+    rows = CareRecord.objects.filter(
+        participant__in=participants, service_date=service_date, shift=shift
+    )
+    return {row.participant_id: row for row in rows}
+
+
 def shift_state(record) -> str:
     if record is None:
         return "none"
@@ -55,7 +63,9 @@ def shift_state(record) -> str:
 def progress(rows) -> tuple[int, int, int]:
     """Return (done, total, percent) where 'done' counts anything not outstanding."""
     total = len(rows)
-    done = sum(1 for row in rows if row["state"] in {RecordStatus.SUBMITTED, RecordStatus.NOT_REQUIRED})
+    done = sum(
+        1 for row in rows if row["state"] in {RecordStatus.SUBMITTED, RecordStatus.NOT_REQUIRED}
+    )
     pct = round(done / total * 100) if total else 0
     return done, total, pct
 
@@ -69,3 +79,37 @@ def previous_shift(shift: str, service_date: date) -> tuple[str, date]:
     if index == 0:
         return Shift.NIGHT, service_date - timedelta(days=1)
     return SHIFT_ORDER[index - 1], service_date
+
+
+def shift_rows(home, service_date, shift) -> list[dict]:
+    """One row per participant in a home, with whatever record exists for the shift.
+
+    Shared by the HTML dashboards and the API so the two can never disagree
+    about who still owes a record.
+    """
+    from apps.people.models import Participant
+
+    if home is None:
+        return []
+
+    participants = (
+        Participant.objects.active()
+        .filter(home=home)
+        .prefetch_related("tags")
+        .order_by("first_name", "last_name")
+    )
+    existing = records_for_shift(home, service_date, shift)
+
+    rows = []
+    for participant in participants:
+        record = existing.get(participant.pk)
+        rows.append(
+            {
+                "participant": participant,
+                "record": record,
+                "state": shift_state(record),
+                "is_done": record is not None
+                and record.status in {RecordStatus.SUBMITTED, RecordStatus.NOT_REQUIRED},
+            }
+        )
+    return rows
