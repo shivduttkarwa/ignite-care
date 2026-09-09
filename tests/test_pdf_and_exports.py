@@ -148,3 +148,23 @@ def test_participant_book_is_an_attachment(client, db, daniel, worker):
     response = client.get(reverse("api:participant-book", args=[daniel.pk]))
     assert response["Content-Type"] == "application/pdf"
     assert response["Content-Disposition"].startswith("attachment;")
+
+
+def test_the_book_can_be_narrowed_to_a_date_range(client, db, daniel, worker):
+    """The proposal promises "choose any date range", so the endpoint must honour it."""
+    for day in (dt.date(2026, 8, 10), dt.date(2026, 8, 11), dt.date(2026, 8, 12)):
+        make_record(daniel, worker, day)
+    client.force_login(worker)
+    url = reverse("api:participant-book", args=[daniel.pk])
+
+    whole = client.get(url)
+    narrowed = client.get(url, {"since": "2026-08-11", "until": "2026-08-12"})
+    assert whole.status_code == narrowed.status_code == 200
+    assert len(narrowed.content) < len(whole.content), "the range must actually drop records"
+
+    empty = client.get(url, {"since": "2027-01-01"})
+    assert empty.status_code == 404
+    assert "date range" in empty.json()["detail"]
+
+    assert client.get(url, {"since": "last tuesday"}).status_code == 400
+    assert client.get(url, {"since": "2026-08-12", "until": "2026-08-10"}).status_code == 400

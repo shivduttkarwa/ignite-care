@@ -60,6 +60,10 @@ def _is_manager(user):
     return bool(user.is_superuser or (profile and profile.is_manager))
 
 
+def _as_date(value):
+    return dt.date.fromisoformat(value) if value else None
+
+
 def _active_home(request):
     """The home the caller is working in, honouring an explicit ?home= override."""
     requested = request.query_params.get("home")
@@ -455,19 +459,39 @@ def record_pdf(request, pk):
 
 @api_view(["GET"])
 def participant_book(request, pk):
+    """The participant's book, optionally narrowed to ?since= and ?until= dates."""
     participant = get_object_or_404(Participant.objects.visible_to(request.user), pk=pk)
-    pdf_bytes, pages = build_participant_book(participant)
-    if not pages:
+
+    try:
+        since = _as_date(request.query_params.get("since"))
+        until = _as_date(request.query_params.get("until"))
+    except ValueError:
         return Response(
-            {"detail": f"{participant.full_name} has no submitted records yet."},
-            status=status.HTTP_404_NOT_FOUND,
+            {"detail": "Dates must be written as YYYY-MM-DD."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
+    if since and until and since > until:
+        return Response(
+            {"detail": "The start date is after the end date."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    pdf_bytes, pages = build_participant_book(participant, since=since, until=until)
+    if not pages:
+        detail = f"{participant.full_name} has no submitted records yet."
+        if since or until:
+            detail = f"{participant.full_name} has no submitted records in that date range."
+        return Response({"detail": detail}, status=status.HTTP_404_NOT_FOUND)
 
     AuditEvent.objects.create(
         actor=request.user,
         action=AuditEvent.Action.DOWNLOAD,
         target=f"book:{participant.pk}",
-        detail={"pages": pages},
+        detail={
+            "pages": pages,
+            "since": since.isoformat() if since else None,
+            "until": until.isoformat() if until else None,
+        },
     )
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     slug = participant.full_name.replace(" ", "-").lower()
