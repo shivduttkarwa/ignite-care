@@ -94,7 +94,7 @@ export function ParticipantRow({
 
         <div className="c-participant__id">
           <h3 className="c-participant__name">
-            <Link to={`/participants/${participant.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+            <Link className="c-participant__link" to={`/participants/${participant.id}`}>
               {participant.full_name}
             </Link>
           </h3>

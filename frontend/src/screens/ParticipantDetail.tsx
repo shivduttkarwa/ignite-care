@@ -104,13 +104,13 @@ export default function ParticipantDetail() {
             </section>
           )}
 
-          <div className="o-stack o-stack--tight">
-            <Link className="c-btn c-btn--primary c-btn--block" to={`/participants/${id}/record/new`}>
+          <div className="c-pageactions">
+            <Link className="c-btn c-btn--primary" to={`/participants/${id}/record/new`}>
               New care record
             </Link>
             <button
               type="button"
-              className="c-btn c-btn--block"
+              className="c-btn"
               onClick={() => download(`/participants/${id}/book.pdf`)}
             >
               <Icon name="download" className="c-btn__icon" />
@@ -165,14 +165,16 @@ export default function ParticipantDetail() {
               </div>
             ))}
 
-            <button
-              type="button"
-              className="c-btn c-btn--block"
-              disabled={history.isFetching}
-              onClick={() => setOlder((value) => value + range)}
-            >
-              {history.isFetching && !history.isPending ? "Loading…" : "Load older"}
-            </button>
+            <div className="c-pageactions c-pageactions--center">
+              <button
+                type="button"
+                className="c-btn"
+                disabled={history.isFetching}
+                onClick={() => setOlder((value) => value + range)}
+              >
+                {history.isFetching && !history.isPending ? "Loading…" : "Load older"}
+              </button>
+            </div>
           </section>
         </>
       )}

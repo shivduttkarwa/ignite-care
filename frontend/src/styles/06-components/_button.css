@@ -73,6 +73,29 @@
   width: 100%;
 }
 
+/* Page actions: full width on a phone, natural width once there is room. */
+.c-pageactions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (min-width: 48em) {
+  .c-pageactions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.c-pageactions--center {
+  align-items: center;
+  justify-content: center;
+}
+
+.c-pageactions--center .c-btn {
+  min-width: min(18rem, 100%);
+}
+
 .c-btn--sm {
   min-height: 2.25rem;
   padding: var(--space-2) var(--space-3);

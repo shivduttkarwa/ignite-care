@@ -91,14 +91,14 @@ export default function RecordDetail() {
               </div>
 
               {r.has_pdf && (
-                <div className="o-stack o-stack--tight">
-                  <Link className="c-btn c-btn--primary c-btn--block" to={`/records/${r.id}/preview`}>
+                <div className="c-pageactions">
+                  <Link className="c-btn c-btn--primary" to={`/records/${r.id}/preview`}>
                     <Icon name="file" className="c-btn__icon" />
                     View PDF
                   </Link>
                   <button
                     type="button"
-                    className="c-btn c-btn--block"
+                    className="c-btn"
                     onClick={() => download(`/records/${r.id}/pdf/`)}
                   >
                     <Icon name="download" className="c-btn__icon" />
@@ -109,9 +109,11 @@ export default function RecordDetail() {
             </>
           )}
 
-          <Link className="c-btn c-btn--block" to={`/participants/${r.participant}`}>
-            All records for this participant
-          </Link>
+          <div className="c-pageactions">
+            <Link className="c-btn" to={`/participants/${r.participant}`}>
+              All records for this participant
+            </Link>
+          </div>
         </>
       )}
     </AppFrame>
