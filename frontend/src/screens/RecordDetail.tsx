@@ -5,17 +5,10 @@ import { api, download } from "../api/client";
 import type { CareRecordDetail, FormSchema } from "../api/types";
 import { AppFrame } from "../components/AppFrame";
 import { Icon } from "../components/Icons";
-import { ErrorState, Loading, StatusPill, clock, longDate } from "../components/bits";
+import { PaperRecord } from "../components/PaperRecord";
+import { ErrorState, FormBadges, Loading, StatusPill } from "../components/bits";
+import { clock, longDate } from "../lib/format";
 import { useMe } from "../lib/auth";
-
-function show(value: unknown) {
-  if (value === true) return "Yes";
-  if (value === false) return "No";
-  if (value === null || value === undefined || value === "") {
-    return <span className="c-paper__off">Not recorded</span>;
-  }
-  return String(value);
-}
 
 export default function RecordDetail() {
   const { id } = useParams();
@@ -29,9 +22,7 @@ export default function RecordDetail() {
   const schema = useQuery({
     queryKey: ["schema", record.data?.schema_key, record.data?.schema_version],
     queryFn: () =>
-      api.get<FormSchema>(
-        `/schemas/${record.data!.schema_key}/${record.data!.schema_version}/`,
-      ),
+      api.get<FormSchema>(`/schemas/${record.data!.schema_key}/${record.data!.schema_version}/`),
     enabled: !!record.data,
     staleTime: 60 * 60_000,
   });
@@ -63,7 +54,7 @@ export default function RecordDetail() {
 
           <div className="o-cluster">
             <StatusPill state={r.status} />
-            <span className="c-formbadge c-formbadge--full">{r.form_title}</span>
+            <FormBadges forms={r.forms} full />
           </div>
 
           {r.status === "not_required" ? (
@@ -75,7 +66,7 @@ export default function RecordDetail() {
             </div>
           ) : (
             <>
-              {r.is_locked && (
+              {r.is_locked ? (
                 <div className="c-callout c-callout--positive">
                   <Icon name="check" />
                   <span>
@@ -83,86 +74,42 @@ export default function RecordDetail() {
                     place.
                   </span>
                 </div>
+              ) : (
+                <div className="c-callout">
+                  <Icon name="clock" />
+                  <span>
+                    This record is still a draft. <Link to={`/records/${r.id}/edit`}>Continue it</Link> to
+                    finish and submit.
+                  </span>
+                </div>
               )}
 
               <div className="c-card">
                 <div className="c-card__body">
-                  <div className="c-paper">
-                    <p className="c-eyebrow">{schema.data.title}</p>
-
-                    <table>
-                      <tbody>
-                        <tr>
-                          <th>Participant</th>
-                          <td>{r.participant_name}</td>
-                        </tr>
-                        <tr>
-                          <th>Date</th>
-                          <td>{longDate(r.service_date)}</td>
-                        </tr>
-                        <tr>
-                          <th>Name of staff on shift</th>
-                          <td>{r.submitted_by_name ?? r.created_by_name}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    {schema.data.sections.map((section) => (
-                      <div key={section.key}>
-                        <h4>{section.title}</h4>
-                        <table>
-                          <tbody>
-                            {section.fields
-                              .filter((field) => field.type !== "repeater")
-                              .map((field) => (
-                                <tr key={field.key}>
-                                  <th>{field.label}</th>
-                                  <td>{show(r.answers[field.key])}</td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
-
-                    {r.attendances.length > 0 && (
-                      <table>
-                        <thead>
-                          <tr>
-                            <th style={{ width: "22%" }}>Time</th>
-                            <th style={{ width: "56%" }}>Purpose</th>
-                            <th>Duration</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {r.attendances.map((row, index) => (
-                            <tr key={index}>
-                              <td>{row.time}</td>
-                              <td>{row.purpose}</td>
-                              <td>{row.duration_minutes} min</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
+                  <PaperRecord record={r} schema={schema.data} />
                 </div>
               </div>
 
               {r.has_pdf && (
-                <button
-                  type="button"
-                  className="c-btn c-btn--block"
-                  onClick={() => download(`/records/${r.id}/pdf/`)}
-                >
-                  <Icon name="download" className="c-btn__icon" />
-                  Download PDF
-                </button>
+                <div className="o-stack o-stack--tight">
+                  <Link className="c-btn c-btn--primary c-btn--block" to={`/records/${r.id}/preview`}>
+                    <Icon name="file" className="c-btn__icon" />
+                    View PDF
+                  </Link>
+                  <button
+                    type="button"
+                    className="c-btn c-btn--block"
+                    onClick={() => download(`/records/${r.id}/pdf/`)}
+                  >
+                    <Icon name="download" className="c-btn__icon" />
+                    Download PDF
+                  </button>
+                </div>
               )}
             </>
           )}
 
-          <Link className="c-btn c-btn--block c-btn--primary" to={`/participants/${r.participant}`}>
+          <Link className="c-btn c-btn--block" to={`/participants/${r.participant}`}>
             All records for this participant
           </Link>
         </>

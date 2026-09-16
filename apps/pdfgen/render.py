@@ -13,8 +13,11 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.template.loader import render_to_string
 
-from apps.records.models import CareRecord, RecordStatus
+from apps.records.models import AttachmentStatus, CareRecord, RecordStatus
 from apps.records.schema import load_schema
+from apps.records.services import in_shift_order
+
+from .charts import chart_pages
 
 _DLL_READY = False
 
@@ -31,23 +34,38 @@ def _prepare_weasyprint():
     _DLL_READY = True
 
 
-def html_to_pdf(html: str, base_url=None) -> bytes:
+def render_pdf(html: str, base_url=None) -> tuple[bytes, list[str]]:
     _prepare_weasyprint()
     from weasyprint import HTML
 
-    return HTML(string=html, base_url=base_url or str(settings.BASE_DIR)).write_pdf()
+    document = HTML(string=html, base_url=base_url or str(settings.BASE_DIR)).render()
+    return document.write_pdf(), _page_labels(document)
+
+
+def _page_labels(document) -> list[str]:
+    starts = {}
+    for label, (page_number, _x, _y), _children, _state in document.make_bookmark_tree():
+        starts.setdefault(page_number, label)
+    labels = []
+    current = ""
+    for page_number in range(len(document.pages)):
+        current = starts.get(page_number, current)
+        labels.append(current)
+    return labels
 
 
 def render_record_html(record: CareRecord) -> str:
     schema = load_schema(record.schema_key, record.schema_version)
     template = f"pdf/{record.schema_key}_{record.schema_version}.html"
+    attachments = record.attachments.filter(status=AttachmentStatus.SUBMITTED)
     return render_to_string(
         template,
         {
             "record": record,
             "participant": record.participant,
             "schema": schema,
-            "attendances": record.attendances.all(),
+            "attendances": in_shift_order(record.attendances.all()),
+            "attachment_pages": chart_pages(record, attachments),
             "organisation_name": settings.ORGANISATION_NAME,
         },
     )
@@ -61,13 +79,14 @@ def build_record_document(record: CareRecord):
     if existing is not None:
         return existing
 
-    pdf_bytes = html_to_pdf(render_record_html(record))
+    pdf_bytes, labels = render_pdf(render_record_html(record))
     digest = hashlib.sha256(pdf_bytes).hexdigest()
 
     document = RecordDocument(
         record=record,
         sha256=digest,
         page_count=_count_pages(pdf_bytes),
+        page_labels=labels,
     )
     document.file.save(f"{record.reference}.pdf", ContentFile(pdf_bytes), save=False)
     document.save()

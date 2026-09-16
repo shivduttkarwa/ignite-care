@@ -533,7 +533,7 @@
 
   <figure>
     <div class="scroll-x">
-      <svg viewBox="0 0 880 340" role="img" aria-label="One web address is split by Caddy: slash serves the React files, slash-api proxies to Django, which owns the database and the PDF store.">
+      <svg viewBox="0 0 880 340" role="img" aria-label="One web address is split by Nginx: slash serves the React files, slash-api proxies to Django, which owns the database and the PDF store.">
         <defs>
           <marker id="s1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
@@ -551,7 +551,7 @@
         <line x1="148" y1="153" x2="206" y2="153" stroke="currentColor" stroke-width="1.4" marker-end="url(#s1)"/>
 
         <rect x="208" y="106" width="128" height="94" rx="3" fill="#115e74" stroke="#115e74"/>
-        <text x="272" y="140" text-anchor="middle" font-size="13" font-weight="600" fill="#fff" font-family="sans-serif">Caddy</text>
+        <text x="272" y="140" text-anchor="middle" font-size="13" font-weight="600" fill="#fff" font-family="sans-serif">Nginx</text>
         <text x="272" y="158" text-anchor="middle" font-size="10" fill="#fff" opacity=".85" font-family="sans-serif">the front door</text>
         <text x="272" y="173" text-anchor="middle" font-size="10" fill="#fff" opacity=".85" font-family="sans-serif">HTTPS + routing</text>
 
@@ -583,7 +583,7 @@
         <text x="8" y="324" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">Two processes, not two servers. The browser only ever sees one website.</text>
       </svg>
     </div>
-    <figcaption><b>Decoupled, but not split up.</b> Caddy is a web server that also handles HTTPS certificates automatically. It serves the React files for every address except <code>/api/</code>, which it hands to Django. To the browser this is one website — which is exactly what makes the sign-in cookie safe (<a href="#auth">section 09</a>).</figcaption>
+    <figcaption><b>Decoupled, but not split up.</b> Nginx is the web server in front of everything, and certbot renews its HTTPS certificate automatically. It serves the React files for every address except <code>/api/</code>, which it hands to Django. To the browser this is one website — which is exactly what makes the sign-in cookie safe (<a href="#auth">section 09</a>).</figcaption>
   </figure>
 
   <h3>Why bother, when one program worked?</h3>
@@ -1240,7 +1240,7 @@
         <text x="440" y="220" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">and there is no copy anywhere a script can reach.</text>
         <text x="440" y="236" font-size="10.5" fill="currentColor" opacity=".8" font-family="sans-serif">Stealing it requires the device, not a script.</text>
 
-        <text x="8" y="282" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">This only works because the app and the API share one origin — which is exactly what Caddy is arranged to give us.</text>
+        <text x="8" y="282" font-size="10" fill="currentColor" opacity=".6" font-family="sans-serif">This only works because the app and the API share one origin — which is exactly what Nginx is arranged to give us.</text>
       </svg>
     </div>
     <figcaption><b>The trade that decided it.</b> Tokens are the default advice for decoupled apps because they work across different domains. We do not need that — the app and the API are one domain — so we keep the safer option and give up nothing.</figcaption>
@@ -1347,7 +1347,7 @@
 
   <div class="note">
     <span class="note__label">Running it</span>
-    Two processes in development: <code>manage.py runserver 127.0.0.1:8811</code> for the API, and <code>npm run dev</code> for the app. You open <strong>port 5173</strong> — Vite passes anything starting with <code>/api</code> through to Django, which mirrors what Caddy does in production so the cookie behaves identically. Opening Django's own port shows a 404, because it has no pages. That is correct.
+    Two processes in development: <code>manage.py runserver 127.0.0.1:8811</code> for the API, and <code>npm run dev</code> for the app. You open <strong>port 5173</strong> — Vite passes anything starting with <code>/api</code> through to Django, which mirrors what Nginx does in production so the cookie behaves identically. Opening Django's own port shows a 404, because it has no pages. That is correct.
   </div>
 </section>
 
@@ -1359,10 +1359,8 @@
 
   <ul>
     <li><strong>SharePoint sync.</strong> The client's headline ask. A background job pushes each participant's book to SharePoint via Microsoft's API, regenerating and replacing the file rather than appending to it. Deliberately last, because it sits on top of a working system and a SharePoint outage must never be able to block a worker's submission.</li>
-    <li><strong>The Seizure Observation Chart</strong> as the second form — the test of whether the schema approach really pays.</li>
     <li><strong>Amendment screens.</strong> The model and the PDF rendering exist; the screen to write one does not.</li>
     <li><strong>Create and edit screens</strong> for participants and staff. The lists exist; adding is still done through Django's built-in admin.</li>
-    <li><strong>PDF preview</strong> in the browser before saving. The download works; previewing does not exist yet.</li>
     <li><strong>Offline submission.</strong> Drafts already survive on the phone, but sending needs a connection.</li>
   </ul>
 
@@ -1405,7 +1403,7 @@
 <footer>
   <span>Ignite support worker portal</span>
   <span>React · TypeScript · Vite · Django 5.2 LTS · DRF · PostgreSQL · WeasyPrint</span>
-  <span>52 tests passing</span>
+  <span>81 tests passing</span>
 </footer>
 
 </div>

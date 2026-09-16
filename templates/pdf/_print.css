@@ -1,0 +1,109 @@
+@page {
+  size: A4;
+  margin: 16mm 15mm 20mm;
+
+  @bottom-center {
+    content: element(footer);
+    width: 100%;
+    vertical-align: top;
+  }
+}
+
+body {
+  font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  color: #000;
+  margin: 0;
+}
+
+h1 { bookmark-level: 1; }
+h2, h3, h4 { bookmark-level: none; }
+
+.footer {
+  position: running(footer);
+  display: flex;
+  align-items: center;
+  gap: 5pt;
+  padding-top: 5pt;
+  border-top: .6pt solid #b5b5b5;
+  font-size: 7.5pt;
+  color: #444;
+}
+
+.footer__mark { height: 10pt; }
+.footer__page { margin-left: auto; }
+.footer__page::after { content: "Page " counter(page) " of " counter(pages); }
+
+.brand { display: flex; align-items: center; gap: 7pt; margin-bottom: 10pt; }
+.brand__mark { height: 26pt; }
+.brand__name { font-size: 12pt; font-weight: bold; line-height: 1.1; }
+.brand__sub { font-size: 7.5pt; color: #444; }
+
+h1 {
+  font-size: 13pt;
+  margin: 0 0 8pt;
+  padding-bottom: 3pt;
+  border-bottom: 1.2pt solid #115e74;
+  text-decoration: underline;
+}
+
+h2 { font-size: 10.5pt; margin: 11pt 0 4pt; }
+
+table { width: 100%; border-collapse: collapse; margin-bottom: 6pt; }
+th, td { border: .6pt solid #000; padding: 3.5pt 5pt; text-align: left; vertical-align: top; }
+th { width: 34%; font-weight: bold; }
+td.label { width: 22%; font-weight: bold; }
+
+.lines p { margin: 0 0 2.5pt; }
+
+.box {
+  display: inline-block;
+  min-width: 22pt;
+  padding: 0 4pt;
+  border: .8pt solid #000;
+  font-weight: bold;
+  text-align: center;
+}
+
+.off { color: #888; }
+.not-recorded { color: #777; font-style: italic; }
+
+.overnight { border: .6pt solid #000; padding: 5pt; margin-bottom: 6pt; }
+.overnight p { margin: 0 0 2pt; }
+
+.attendances { border: .6pt solid #000; padding: 5pt; margin-bottom: 6pt; }
+.attendances__title { margin: 0 0 4pt; font-weight: bold; }
+.attendances table { margin: 0; }
+.attendances th { width: auto; }
+.attendances .col-time { width: 18%; }
+.attendances .col-duration { width: 20%; }
+.attendances p.not-recorded { margin: 0; }
+
+.footnote { margin-top: 10pt; font-weight: bold; font-size: 10pt; }
+
+.amendment {
+  margin-top: 10pt;
+  border: .8pt solid #b12655;
+  padding: 5pt;
+  font-size: 9.5pt;
+}
+
+.amendment h3 { margin: 0 0 3pt; font-size: 9.5pt; color: #b12655; }
+
+.chart { page-break-before: always; }
+
+.chart .brand { margin-bottom: 6pt; }
+.chart h1 { margin-bottom: 6pt; }
+
+.grid { table-layout: fixed; font-size: 8.5pt; line-height: 1.2; border: 1pt solid #000; }
+.grid tr { page-break-inside: avoid; }
+.grid th, .grid td { padding: 1.9pt 5pt; }
+.grid th { width: auto; font-weight: normal; }
+.grid .grid__labelcol { width: 40%; }
+.grid td { text-align: center; }
+.grid__key th, .grid__heading th { background: #e8e6e1; font-weight: bold; }
+.grid .is-strong { font-weight: bold; }
+.grid .is-muted { color: #777; font-style: italic; font-weight: normal; }
+.grid .is-signature { font-style: italic; }
+.grid td img { max-height: 16pt; max-width: 100%; }

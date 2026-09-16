@@ -14,6 +14,9 @@
 @import url("06-components/_field.css") layer(components);
 @import url("06-components/_section.css") layer(components);
 @import url("06-components/_admin.css") layer(components);
+@import url("06-components/_chart.css") layer(components);
+@import url("06-components/_preview.css") layer(components);
+@import url("06-components/_menu.css") layer(components);
 @import url("07-utilities/_utils.css") layer(utilities);
 
 @view-transition {

@@ -95,6 +95,16 @@ export function IconSprite() {
         <path d="M10 2.8 4.2 5v4.6c0 3.4 2.3 6.2 5.8 7.6 3.5-1.4 5.8-4.2 5.8-7.6V5L10 2.8Z" />
         <path d="m7.6 10 1.7 1.7 3.3-3.4" />
       </symbol>
+      <symbol id="i-more" viewBox="0 0 20 20" fill="currentColor">
+        <circle cx="4.5" cy="10" r="1.5" />
+        <circle cx="10" cy="10" r="1.5" />
+        <circle cx="15.5" cy="10" r="1.5" />
+      </symbol>
+      <symbol id="i-print" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 7.5V3.5h8v4" />
+        <rect x="3" y="7.5" width="14" height="6.5" rx="1.5" />
+        <path d="M6 11.5h8v5H6z" />
+      </symbol>
     </svg>
   );
 }

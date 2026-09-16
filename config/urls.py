@@ -1,7 +1,7 @@
 """URL map.
 
 Django serves a JSON API and generated PDFs. The user interface is the React
-app in frontend/, served by Caddy at / in production and by Vite in
+app in frontend/, served by Nginx at / in production and by Vite in
 development. There are no HTML views here beyond Django's own admin, which is
 a superuser back door for data repair, not a client-facing screen.
 """

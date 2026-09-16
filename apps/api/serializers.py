@@ -2,8 +2,15 @@ from rest_framework import serializers
 
 from apps.notices.models import Notice
 from apps.people.models import ConditionTag, Home, Participant
-from apps.records.models import CareRecord, OvernightAttendance
+from apps.records.attachments import (
+    attachment_description,
+    attachment_label,
+    forms_for,
+    summary_parts,
+)
+from apps.records.models import AttachedForm, CareRecord, OvernightAttendance
 from apps.records.schema import load_schema, summarise
+from apps.records.services import in_shift_order
 
 
 class HomeSerializer(serializers.ModelSerializer):
@@ -89,6 +96,7 @@ class CareRecordListSerializer(serializers.ModelSerializer):
     has_pdf = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
     form_title = serializers.SerializerMethodField()
+    forms = serializers.SerializerMethodField()
 
     class Meta:
         model = CareRecord
@@ -108,6 +116,7 @@ class CareRecordListSerializer(serializers.ModelSerializer):
             "schema_key",
             "schema_version",
             "form_title",
+            "forms",
             "submitted_at",
             "submitted_by_name",
             "created_by_name",
@@ -129,24 +138,71 @@ class CareRecordListSerializer(serializers.ModelSerializer):
         if record.status == "not_required":
             return [record.not_required_reason] if record.not_required_reason else []
         schema = load_schema(record.schema_key, record.schema_version)
-        return summarise(schema, record.answers)
+        return summarise(schema, record.answers) + summary_parts(record)
 
     def get_form_title(self, record):
         return load_schema(record.schema_key, record.schema_version)["short_title"]
 
+    def get_forms(self, record):
+        return forms_for(record)
+
+
+class AttachmentSummarySerializer(serializers.ModelSerializer):
+    badge = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    label = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    is_editable = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = AttachedForm
+        fields = (
+            "id",
+            "schema_key",
+            "schema_version",
+            "position",
+            "status",
+            "badge",
+            "title",
+            "label",
+            "description",
+            "is_editable",
+            "submitted_at",
+            "updated_at",
+        )
+
+    def get_badge(self, attachment):
+        return load_schema(attachment.schema_key, attachment.schema_version)["badge"]
+
+    def get_title(self, attachment):
+        return load_schema(attachment.schema_key, attachment.schema_version)["short_title"]
+
+    def get_label(self, attachment):
+        return attachment_label(attachment)
+
+    def get_description(self, attachment):
+        return attachment_description(attachment)
+
 
 class CareRecordDetailSerializer(CareRecordListSerializer):
-    attendances = AttendanceSerializer(many=True, read_only=True)
+    attendances = serializers.SerializerMethodField()
+    attachments = AttachmentSummarySerializer(many=True, read_only=True)
     amendments = serializers.SerializerMethodField()
+    document_pages = serializers.SerializerMethodField()
 
     class Meta(CareRecordListSerializer.Meta):
         fields = CareRecordListSerializer.Meta.fields + (
             "answers",
             "attendances",
+            "attachments",
             "amendments",
+            "document_pages",
             "created_at",
             "updated_at",
         )
+
+    def get_attendances(self, record):
+        return AttendanceSerializer(in_shift_order(record.attendances.all()), many=True).data
 
     def get_amendments(self, record):
         return [
@@ -157,6 +213,16 @@ class CareRecordDetailSerializer(CareRecordListSerializer):
                 "created_at": a.created_at,
             }
             for a in record.amendments.all()
+        ]
+
+    def get_document_pages(self, record):
+        document = getattr(record, "document", None)
+        if document is None:
+            return []
+        labels = document.page_labels or []
+        return [
+            {"number": number, "label": labels[number - 1] if number <= len(labels) else ""}
+            for number in range(1, document.page_count + 1)
         ]
 
 
@@ -197,3 +263,34 @@ class RecordWriteSerializer(serializers.Serializer):
 
     answers = serializers.DictField(required=False, default=dict)
     attendances = serializers.ListField(child=serializers.DictField(), required=False, default=list)
+
+
+class AttachedFormSerializer(AttachmentSummarySerializer):
+    record = serializers.PrimaryKeyRelatedField(read_only=True)
+    record_reference = serializers.CharField(source="record.reference", read_only=True)
+    record_status = serializers.CharField(source="record.status", read_only=True)
+    participant = serializers.IntegerField(source="record.participant_id", read_only=True)
+    participant_name = serializers.CharField(source="record.participant.full_name", read_only=True)
+    service_date = serializers.DateField(source="record.service_date", read_only=True)
+    shift_label = serializers.CharField(source="record.get_shift_display", read_only=True)
+    created_by_name = StaffNameField(source="created_by", read_only=True)
+    submitted_by_name = StaffNameField(source="submitted_by", read_only=True)
+
+    class Meta(AttachmentSummarySerializer.Meta):
+        fields = AttachmentSummarySerializer.Meta.fields + (
+            "record",
+            "record_reference",
+            "record_status",
+            "participant",
+            "participant_name",
+            "service_date",
+            "shift_label",
+            "answers",
+            "created_at",
+            "created_by_name",
+            "submitted_by_name",
+        )
+
+
+class AttachmentWriteSerializer(serializers.Serializer):
+    answers = serializers.DictField(required=False, default=dict)

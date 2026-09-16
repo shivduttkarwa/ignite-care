@@ -1,0 +1,243 @@
+{
+  "key": "seizure_observation",
+  "version": "v02",
+  "title": "Seizure Observation Chart",
+  "short_title": "Seizure Chart",
+  "badge": "SEIZURE",
+  "pdf_label": "Seizure Observation",
+  "attachable": true,
+  "collapsible": false,
+  "item_label": "Seizure",
+  "count_label": ["seizure", "seizures"],
+  "describe": ["start_time", "seizure_length"],
+  "headline": "seizure_length",
+  "instruction": "Start recording time at the beginning of the seizure",
+  "pdf_columns": 3,
+  "sections": [
+    {
+      "key": "timing",
+      "title": "Timing",
+      "pdf_heading": false,
+      "fields": [
+        {
+          "key": "start_time",
+          "type": "timer",
+          "label": "Seizure start time",
+          "pdf_label": "TIME",
+          "writes": "seizure_length",
+          "required": true,
+          "error": "Record the time the seizure started"
+        }
+      ]
+    },
+    {
+      "key": "awareness",
+      "title": "Awareness",
+      "fields": [
+        {
+          "key": "awareness",
+          "type": "checks",
+          "label": "Awareness",
+          "hide_label": true,
+          "help": "Tick all that apply",
+          "options": [
+            { "key": "confused", "label": "Confused" },
+            { "key": "responds_to_voice", "label": "Responds to voice" },
+            { "key": "not_responsive", "label": "Not responsive" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "facial_expressions",
+      "title": "Facial Expressions",
+      "fields": [
+        {
+          "key": "facial_expressions",
+          "type": "checks",
+          "label": "Facial Expressions",
+          "hide_label": true,
+          "help": "Tick all that apply",
+          "options": [
+            { "key": "staring_blank", "label": "Staring or Blank" },
+            { "key": "twitching", "label": "Twitching" },
+            { "key": "pupils_dilated", "label": "Pupils Dilated" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "body_movement",
+      "title": "Body Movement",
+      "fields": [
+        {
+          "key": "body_movement",
+          "type": "checks",
+          "label": "Body Movement",
+          "hide_label": true,
+          "help": "Tick all that apply",
+          "options": [
+            { "key": "whole_body", "label": "Whole body" },
+            { "key": "legs", "label": "Legs" },
+            { "key": "arms", "label": "Arms" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "automatic_movement",
+      "title": "Automatic Movement",
+      "fields": [
+        {
+          "key": "automatic_movement",
+          "type": "checks",
+          "label": "Automatic Movement",
+          "hide_label": true,
+          "help": "Tick all that apply",
+          "options": [
+            { "key": "walking_wandering", "label": "Walking, wandering" },
+            { "key": "hands_clapping_rubbing", "label": "Hands clapping, rubbing" },
+            { "key": "chewing", "label": "Chewing" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "speech",
+      "title": "Speech",
+      "fields": [
+        {
+          "key": "speech",
+          "type": "checks",
+          "label": "Speech",
+          "hide_label": true,
+          "help": "Tick all that apply",
+          "options": [
+            { "key": "incoherent", "label": "Incoherent" },
+            { "key": "unable_to_talk_normally", "label": "Unable to talk normally" },
+            { "key": "mixing_up_words", "label": "Mixing up of words" },
+            { "key": "unable_to_talk", "label": "Unable to talk" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "falls",
+      "title": "Falls",
+      "fields": [
+        { "key": "falls", "type": "yesno", "label": "Falls?" },
+        {
+          "key": "falls_notice",
+          "type": "notice",
+          "tone": "danger",
+          "label": "Incident report and bruise chart must be completed.",
+          "show_if": { "all": [{ "field": "falls", "eq": true }] }
+        }
+      ]
+    },
+    {
+      "key": "after_seizure",
+      "title": "After Seizure",
+      "fields": [
+        {
+          "key": "after_seizure",
+          "type": "checks",
+          "label": "After Seizure",
+          "hide_label": true,
+          "help": "Tick all that apply",
+          "options": [
+            { "key": "fully_aware", "label": "Fully aware" },
+            { "key": "responds_normally", "label": "Responds normally" },
+            { "key": "confused", "label": "Confused" },
+            { "key": "tired", "label": "Tired" },
+            { "key": "sleep", "label": "Sleep" },
+            { "key": "agitated_irritable", "label": "Agitated, Irritable" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "duration",
+      "title": "Duration of seizure",
+      "fields": [
+        {
+          "key": "seizure_length",
+          "type": "text",
+          "label": "Length of time of seizure",
+          "placeholder": "e.g. 2 min 10 sec",
+          "required": true,
+          "error": "Record how long the seizure lasted",
+          "pdf_format": "duration",
+          "pdf_strong": true
+        },
+        {
+          "key": "recovery_length",
+          "type": "text",
+          "label": "Length of recovery period",
+          "placeholder": "e.g. 15 minutes",
+          "pdf_strong": true
+        }
+      ]
+    },
+    {
+      "key": "incontinence",
+      "title": "Incontinence",
+      "fields": [
+        {
+          "key": "incontinence",
+          "type": "checks",
+          "label": "Incontinence",
+          "hide_label": true,
+          "options": [
+            { "key": "bowel", "label": "Bowel" },
+            { "key": "urine", "label": "Urine" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "injury",
+      "title": "Injury Type",
+      "fields": [
+        { "key": "person_injured", "type": "yesno", "label": "Person injured?" },
+        {
+          "key": "injury_details",
+          "type": "textarea",
+          "label": "Injury details",
+          "placeholder": "Where, and what kind of injury",
+          "show_if": { "all": [{ "field": "person_injured", "eq": true }] },
+          "required_when_shown": true,
+          "error": "Describe the injury",
+          "pdf_strong": true
+        },
+        { "key": "qas_called", "type": "yesno", "label": "QAS Called?" },
+        { "key": "incident_report", "type": "yesno", "label": "Incident Report completed?" }
+      ]
+    },
+    {
+      "key": "sign_off",
+      "title": "Sign-off",
+      "pdf_heading": false,
+      "fields": [
+        {
+          "key": "observer_name",
+          "type": "text",
+          "label": "Name of observer",
+          "prefill": "full_name",
+          "required": true,
+          "error": "Add the observer's name",
+          "pdf_label_strong": true
+        },
+        {
+          "key": "signature",
+          "type": "signature",
+          "label": "Signed",
+          "timestamp_label": "Timestamp",
+          "required": true,
+          "error": "Sign the chart, or type your name instead",
+          "pdf_label_strong": true
+        }
+      ]
+    }
+  ]
+}

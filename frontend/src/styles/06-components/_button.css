@@ -133,3 +133,8 @@
 .c-actionbar--single {
   grid-template-columns: 1fr;
 }
+
+.c-link-action--inline {
+  min-height: auto;
+  padding: 0;
+}

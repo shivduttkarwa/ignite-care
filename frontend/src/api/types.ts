@@ -43,6 +43,12 @@ export type ParticipantDetail = Participant & {
 
 export type RecordStatus = "draft" | "submitted" | "not_required" | "void";
 
+export type FormBadge = {
+  key: string;
+  badge: string;
+  title: string;
+};
+
 export type CareRecord = {
   id: number;
   reference: string;
@@ -59,6 +65,7 @@ export type CareRecord = {
   schema_key: string;
   schema_version: string;
   form_title: string;
+  forms: FormBadge[];
   submitted_at: string | null;
   submitted_by_name: string | null;
   created_by_name: string | null;
@@ -79,10 +86,45 @@ export type Attendance = {
   duration_minutes: number | string;
 };
 
+export type AttachmentStatus = "draft" | "submitted";
+
+export type AttachmentSummary = {
+  id: number;
+  schema_key: string;
+  schema_version: string;
+  position: number;
+  status: AttachmentStatus;
+  badge: string;
+  title: string;
+  label: string;
+  description: string;
+  is_editable: boolean;
+  submitted_at: string | null;
+  updated_at: string;
+};
+
+export type AttachedForm = AttachmentSummary & {
+  record: number;
+  record_reference: string;
+  record_status: RecordStatus;
+  participant: number;
+  participant_name: string;
+  service_date: string;
+  shift_label: string;
+  answers: Record<string, unknown>;
+  created_at: string;
+  created_by_name: string | null;
+  submitted_by_name: string | null;
+};
+
 export type CareRecordDetail = CareRecord & {
   answers: Record<string, unknown>;
   attendances: Attendance[];
+  attachments: AttachmentSummary[];
   amendments: { reason: string; body: string; author: string; created_at: string }[];
+  document_pages: { number: number; label: string }[];
+  created_at: string;
+  updated_at: string;
 };
 
 /* Form schemas -------------------------------------------------------------
@@ -94,11 +136,24 @@ export type FieldType =
   | "textarea"
   | "time"
   | "number"
-  | "repeater";
+  | "repeater"
+  | "checks"
+  | "signature"
+  | "timer"
+  | "notice";
 
 export type ShowIf = {
   all?: { field: string; eq?: unknown; filled?: boolean }[];
 };
+
+export type FieldOption = {
+  key: string;
+  label: string;
+};
+
+export type Signature =
+  | { mode: "typed"; name: string; signed_at: string }
+  | { mode: "drawn"; data: string; signed_at: string };
 
 export type SchemaField = {
   key: string;
@@ -112,8 +167,15 @@ export type SchemaField = {
   show_if?: ShowIf;
   promote?: string;
   group?: string;
+  group_label?: string;
   add_label?: string;
   suffix?: string;
+  options?: FieldOption[];
+  hide_label?: boolean;
+  tone?: "danger" | "caution";
+  writes?: string;
+  prefill?: string;
+  timestamp_label?: string;
   columns?: { key: string; type: FieldType; label: string; placeholder?: string }[];
 };
 
@@ -129,8 +191,21 @@ export type FormSchema = {
   title: string;
   short_title: string;
   badge: string;
-  footer_note: string;
+  footer_note?: string;
+  instruction?: string;
+  collapsible?: boolean;
+  attachable?: boolean;
+  item_label?: string;
   sections: SchemaSection[];
+};
+
+export type SchemaSummary = {
+  key: string;
+  version: string;
+  title: string;
+  short_title: string;
+  badge: string;
+  attachable: boolean;
 };
 
 /* Screens ------------------------------------------------------------------ */
@@ -145,6 +220,15 @@ export type Me = {
   homes: Home[];
   active_home: number | null;
   shift: { key: string; label: string; service_date: string };
+};
+
+export type Worker = {
+  id: number;
+  full_name: string;
+  initials: string;
+  role: string;
+  is_manager: boolean;
+  homes: { id: number; label: string }[];
 };
 
 export type ShiftRow = {

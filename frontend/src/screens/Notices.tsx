@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { Notice } from "../api/types";
 import { AppFrame } from "../components/AppFrame";
-import { EmptyState, ErrorState, Loading, clock, shortDate } from "../components/bits";
+import { EmptyState, ErrorState, Loading } from "../components/bits";
+import { clock, shortDate } from "../lib/format";
 import { useMe } from "../lib/auth";
 
 export default function Notices() {

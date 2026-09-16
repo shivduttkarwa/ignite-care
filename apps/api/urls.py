@@ -38,6 +38,11 @@ urlpatterns = [
     path("records/<int:pk>/draft/", views.record_save_draft, name="record-draft"),
     path("records/<int:pk>/submit/", views.record_submit, name="record-submit"),
     path("records/<int:pk>/pdf/", views.record_pdf, name="record-pdf"),
+    path("records/<int:pk>/attachments/", views.attachment_create, name="attachment-create"),
+    # Attached forms
+    path("attachments/<int:pk>/", views.attachment_detail, name="attachment-detail"),
+    path("attachments/<int:pk>/draft/", views.attachment_save_draft, name="attachment-draft"),
+    path("attachments/<int:pk>/submit/", views.attachment_submit, name="attachment-submit"),
     # Notices
     path("notices/", views.notice_list, name="notice-list"),
     path("notices/read/", views.notice_mark_read, name="notice-read"),

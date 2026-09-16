@@ -14,6 +14,7 @@ class RecordDocument(models.Model):
     file = models.FileField(upload_to="records/%Y/%m/")
     sha256 = models.CharField(max_length=64)
     page_count = models.PositiveSmallIntegerField(default=1)
+    page_labels = models.JSONField(default=list, blank=True)
     generated_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

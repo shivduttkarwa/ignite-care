@@ -93,3 +93,9 @@
 [x-cloak] {
   display: none !important;
 }
+
+@media (max-width: 59.99em) {
+  .u-desktop-only {
+    display: none;
+  }
+}

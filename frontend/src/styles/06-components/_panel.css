@@ -261,3 +261,8 @@ a.c-plist__item:hover {
   color: var(--color-primary-active);
   box-shadow: var(--shadow-xs);
 }
+
+.c-switch__count {
+  margin-inline-start: var(--space-1);
+  color: var(--color-accent);
+}

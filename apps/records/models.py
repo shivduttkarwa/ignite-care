@@ -182,3 +182,50 @@ class AuditEvent(models.Model):
 
     def __str__(self):
         return f"{self.actor} {self.action} {self.target}"
+
+
+class AttachmentStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    SUBMITTED = "submitted", "Submitted"
+
+
+class AttachedForm(models.Model):
+    record = models.ForeignKey(CareRecord, on_delete=models.CASCADE, related_name="attachments")
+    schema_key = models.CharField(max_length=60)
+    schema_version = models.CharField(max_length=20)
+    position = models.PositiveSmallIntegerField(default=1)
+    answers = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=12, choices=AttachmentStatus.choices, default=AttachmentStatus.DRAFT
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="attachments_created"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="attachments_submitted",
+        null=True,
+        blank=True,
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ("position", "created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("record", "schema_key", "position"), name="one_position_per_record_form"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.record.reference} {self.schema_key} {self.position}"
+
+    @property
+    def is_editable(self):
+        return self.record.status == RecordStatus.DRAFT

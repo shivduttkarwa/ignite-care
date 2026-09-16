@@ -12,6 +12,8 @@ from django.core.exceptions import ValidationError
 
 TRUTHY = {"true", "True", "yes", "on", "1", True}
 FALSEY = {"false", "False", "no", "off", "0", False}
+STRUCTURAL_TYPES = {"repeater", "notice"}
+SIGNATURE_MAX_LENGTH = 300_000
 
 
 class SchemaNotFound(Exception):
@@ -33,6 +35,11 @@ def available_schemas() -> list[dict]:
     return out
 
 
+def attachable_schema(key: str) -> dict | None:
+    matches = [s for s in available_schemas() if s["key"] == key and s.get("attachable")]
+    return max(matches, key=lambda s: s["version"]) if matches else None
+
+
 def iter_fields(schema: dict):
     for section in schema["sections"]:
         for field in section["fields"]:
@@ -46,9 +53,20 @@ def find_field(schema: dict, key: str):
     return None
 
 
+def is_blank(value) -> bool:
+    return value is None or value == "" or value == []
+
+
 def coerce(field: dict, raw):
     """Turn one posted value into what belongs in the answers JSON."""
     ftype = field["type"]
+    if ftype == "notice":
+        return None
+    if ftype == "checks":
+        chosen = {str(item) for item in raw} if isinstance(raw, list) else set()
+        return [option["key"] for option in field["options"] if option["key"] in chosen]
+    if ftype == "signature":
+        return _coerce_signature(raw)
     if raw is None:
         return None
     if ftype == "yesno":
@@ -68,6 +86,24 @@ def coerce(field: dict, raw):
     return str(raw).strip()
 
 
+def _coerce_signature(raw):
+    if not isinstance(raw, dict):
+        return None
+    signed_at = str(raw.get("signed_at") or "")[:40]
+    if raw.get("mode") == "typed":
+        name = str(raw.get("name") or "").strip()[:120]
+        return {"mode": "typed", "name": name, "signed_at": signed_at} if name else None
+    data = raw.get("data")
+    if (
+        raw.get("mode") == "drawn"
+        and isinstance(data, str)
+        and data.startswith("data:image/png;base64,")
+        and len(data) <= SIGNATURE_MAX_LENGTH
+    ):
+        return {"mode": "drawn", "data": data, "signed_at": signed_at}
+    return None
+
+
 def is_visible(field: dict, answers: dict) -> bool:
     """Evaluate a show_if rule against the answers collected so far."""
     rule = field.get("show_if")
@@ -83,17 +119,44 @@ def is_visible(field: dict, answers: dict) -> bool:
     return True
 
 
+def clean_answers(schema: dict, raw: dict) -> dict:
+    raw = raw or {}
+    answers = {}
+    for _section, field in iter_fields(schema):
+        if field["type"] not in STRUCTURAL_TYPES:
+            answers[field["key"]] = coerce(field, raw.get(field["key"]))
+    for _section, field in iter_fields(schema):
+        if field["key"] in answers and not is_visible(field, answers):
+            answers[field["key"]] = None
+    return answers
+
+
+def prefilled_answers(schema: dict, user) -> dict:
+    values = {"full_name": user.get_full_name() or user.username}
+    return {
+        field["key"]: values[field["prefill"]]
+        for _section, field in iter_fields(schema)
+        if field.get("prefill") in values
+    }
+
+
+def has_content(schema: dict, answers: dict) -> bool:
+    return any(
+        not is_blank((answers or {}).get(field["key"]))
+        for _section, field in iter_fields(schema)
+        if field["type"] not in STRUCTURAL_TYPES and not field.get("prefill")
+    )
+
+
 def validate(schema: dict, answers: dict) -> dict[str, str]:
     """Return {field_key: message} for everything the schema says is wrong."""
     errors: dict[str, str] = {}
     for _section, field in iter_fields(schema):
-        if field["type"] == "repeater":
+        if field["type"] in STRUCTURAL_TYPES:
             continue
         visible = is_visible(field, answers)
-        value = answers.get(field["key"])
-        blank = value is None or value == ""
         required = field.get("required") or (field.get("required_when_shown") and visible)
-        if required and visible and blank:
+        if required and visible and is_blank(answers.get(field["key"])):
             errors[field["key"]] = field.get("error") or f"{field['label']} is required."
     return errors
 
@@ -118,14 +181,10 @@ def answered_count(section: dict, answers: dict) -> tuple[int, int]:
     total = 0
     filled = 0
     for field in section["fields"]:
-        if not is_visible(field, answers):
+        if field["type"] == "notice" or not is_visible(field, answers):
             continue
         total += 1
-        value = answers.get(field["key"])
-        if field["type"] == "repeater":
-            if value:
-                filled += 1
-        elif value is not None and value != "":
+        if not is_blank(answers.get(field["key"])):
             filled += 1
     return filled, total
 

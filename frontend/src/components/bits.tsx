@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { CareRecord, ConditionTag, Participant, RecordStatus } from "../api/types";
+import { clock, formBadgeClass } from "../lib/format";
 import { Icon } from "./Icons";
 
 /* Status ------------------------------------------------------------------- */
@@ -36,6 +38,23 @@ export function Tags({ tags }: { tags: ConditionTag[] }) {
   );
 }
 
+export function FormBadges({ forms, full = false }: { forms: CareRecord["forms"]; full?: boolean }) {
+  return (
+    <>
+      {forms.map((form) => (
+        <span
+          key={form.key}
+          className={["c-formbadge", full ? "c-formbadge--full" : "", formBadgeClass(form.key)]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {full ? form.title : form.badge}
+        </span>
+      ))}
+    </>
+  );
+}
+
 /* Participant row ----------------------------------------------------------- */
 
 type RowProps = {
@@ -60,6 +79,11 @@ export function ParticipantRow({
     : participant.shift_alert
       ? " c-participant--flagged"
       : "";
+
+  const menu: MenuItem[] = [{ label: "View participant", to: `/participants/${participant.id}` }];
+  if (!isDone && onNotRequired) {
+    menu.push({ label: "Mark not required", onSelect: () => onNotRequired(participant) });
+  }
 
   return (
     <article className={`c-participant${modifier}`}>
@@ -117,18 +141,72 @@ export function ParticipantRow({
             </Link>
           )}
 
-          {!isDone && onNotRequired && (
-            <button
-              type="button"
-              className="c-link-action c-link-action--muted"
-              onClick={() => onNotRequired(participant)}
-            >
-              Not required
-            </button>
-          )}
+          <Menu label={`More actions for ${participant.full_name}`} items={menu} />
         </div>
       </div>
     </article>
+  );
+}
+
+type MenuItem = { label: string; to?: string; onSelect?: () => void };
+
+export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="c-menu" ref={ref}>
+      <button
+        type="button"
+        className="c-menu__trigger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="more" />
+      </button>
+      {open && (
+        <div className="c-menu__list" role="menu">
+          {items.map((item) =>
+            item.to ? (
+              <Link key={item.label} role="menuitem" className="c-menu__item" to={item.to}>
+                {item.label}
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                className="c-menu__item"
+                onClick={() => {
+                  setOpen(false);
+                  item.onSelect?.();
+                }}
+              >
+                {item.label}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -239,7 +317,7 @@ export function RecordCard({ record }: { record: CareRecord }) {
         </span>
       </div>
       <div className="o-cluster">
-        <span className="c-formbadge c-formbadge--full">{record.form_title}</span>
+        <FormBadges forms={record.forms} full />
         {record.status === "not_required" && <StatusPill state={record.status} />}
       </div>
       {record.summary.length > 0 && (
@@ -249,28 +327,13 @@ export function RecordCard({ record }: { record: CareRecord }) {
   );
 }
 
-/* Formatting ---------------------------------------------------------------- */
-
-export function clock(iso: string): string {
-  const d = new Date(iso);
-  const hour = d.getHours() % 12 || 12;
-  const minute = String(d.getMinutes()).padStart(2, "0");
-  return `${hour}:${minute}${d.getHours() < 12 ? "am" : "pm"}`;
-}
-
-export function longDate(value: string): string {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function shortDate(value: string): string {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("en-AU", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+export function YesNoBoxes({ value }: { value: unknown }) {
+  const yes = value === true || value === "true";
+  const no = value === false || value === "false";
+  return (
+    <>
+      <span className={yes ? "c-paper__box" : "c-paper__off"}>YES</span>{" "}
+      <span className={no ? "c-paper__box" : "c-paper__off"}>NO</span>
+    </>
+  );
 }

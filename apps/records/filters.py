@@ -8,7 +8,7 @@ export can never contain different rows from the screen it was taken from.
 
 import datetime as dt
 
-from .models import CareRecord, RecordStatus
+from .models import AttachmentStatus, CareRecord, RecordStatus
 
 # The yellow-highlighted fields from the client's paper form, plus shower.
 TRISTATE_FIELDS = {
@@ -31,6 +31,7 @@ def base_queryset(user):
         .select_related(
             "participant", "home", "submitted_by__staff_profile", "created_by", "document"
         )
+        .prefetch_related("attachments")
     )
 
 
@@ -41,6 +42,7 @@ def read_params(params) -> dict:
         "participant": params.get("participant") or "",
         "worker": params.get("worker") or "",
         "shift": params.get("shift") or "",
+        "form": params.get("form") or "",
         "range": params.get("range") or "7",
     }
     for key in list(TRISTATE_FIELDS) + list(RECORDED_FIELDS):
@@ -57,6 +59,14 @@ def filter_records(records, selected: dict):
         records = records.filter(submitted_by_id=selected["worker"])
     if selected.get("shift"):
         records = records.filter(shift=selected["shift"])
+
+    form = selected.get("form")
+    if form == "daily_care":
+        records = records.filter(schema_key=form)
+    elif form:
+        records = records.filter(
+            attachments__schema_key=form, attachments__status=AttachmentStatus.SUBMITTED
+        ).distinct()
 
     window = selected.get("range") or "7"
     if window in {"7", "14", "30"}:

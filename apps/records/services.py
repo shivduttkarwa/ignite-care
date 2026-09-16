@@ -113,3 +113,7 @@ def shift_rows(home, service_date, shift) -> list[dict]:
             }
         )
     return rows
+
+
+def in_shift_order(attendances):
+    return sorted(attendances, key=lambda row: (row.time.hour < 12, row.time))

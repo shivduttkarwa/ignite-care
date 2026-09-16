@@ -1,0 +1,56 @@
+.c-menu {
+  position: relative;
+}
+
+.c-menu__trigger {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+.c-menu__trigger:hover,
+.c-menu__trigger[aria-expanded="true"] {
+  background: var(--c-line-soft);
+  color: var(--color-text);
+}
+
+.c-menu__trigger svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.c-menu__list {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + var(--space-1));
+  z-index: var(--z-overlay);
+  min-width: 12rem;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.c-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+}
+
+.c-menu__item:hover,
+.c-menu__item:focus-visible {
+  background: var(--c-teal-050);
+  color: var(--color-primary-active);
+}

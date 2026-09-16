@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { IconSprite } from "./components/Icons";
@@ -8,22 +9,27 @@ import Participants from "./screens/Participants";
 import ParticipantDetail from "./screens/ParticipantDetail";
 import RecordForm from "./screens/RecordForm";
 import RecordDetail from "./screens/RecordDetail";
+import AttachmentForm from "./screens/AttachmentForm";
 import Records from "./screens/Records";
 import Notices from "./screens/Notices";
 import Properties from "./screens/Properties";
 import Workers from "./screens/Workers";
 
+const RecordPreview = lazy(() => import("./screens/RecordPreview"));
+
+function Pending() {
+  return (
+    <div className="c-signin">
+      <p className="u-muted">Loading…</p>
+    </div>
+  );
+}
+
 function Protected({ children }: { children: React.ReactNode }) {
   const { data: me, isPending, isError } = useMe();
   const location = useLocation();
 
-  if (isPending) {
-    return (
-      <div className="c-signin">
-        <p className="u-muted">Loading…</p>
-      </div>
-    );
-  }
+  if (isPending) return <Pending />;
   if (isError || !me) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
@@ -63,6 +69,15 @@ export default function App() {
                 />
                 <Route path="/records/:id" element={<RecordDetail />} />
                 <Route path="/records/:id/edit" element={<RecordForm mode="edit" />} />
+                <Route
+                  path="/records/:id/preview"
+                  element={
+                    <Suspense fallback={<Pending />}>
+                      <RecordPreview />
+                    </Suspense>
+                  }
+                />
+                <Route path="/records/:recordId/attachments/:id" element={<AttachmentForm />} />
                 <Route path="/notices" element={<Notices />} />
                 <Route
                   path="/properties"

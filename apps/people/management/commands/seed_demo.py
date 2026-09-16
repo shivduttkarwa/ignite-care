@@ -15,7 +15,15 @@ from django.utils import timezone
 
 from apps.notices.models import Notice
 from apps.people.models import ConditionTag, Home, Participant, StaffProfile
-from apps.records.models import CareRecord, OvernightAttendance, RecordStatus, Shift
+from apps.records.models import (
+    AttachedForm,
+    AttachmentStatus,
+    CareRecord,
+    OvernightAttendance,
+    RecordStatus,
+    Shift,
+)
+from apps.records.schema import clean_answers, load_schema
 
 User = get_user_model()
 
@@ -121,6 +129,71 @@ AWAKE = [
     "Slept through, no concerns",
     "Awake briefly at 4am, resettled quickly",
 ]
+
+SEIZURES = [
+    {
+        "awareness": ["confused"],
+        "facial_expressions": ["staring_blank"],
+        "body_movement": ["whole_body"],
+        "speech": ["unable_to_talk"],
+        "falls": False,
+        "after_seizure": ["tired", "sleep"],
+        "seizure_length": "2 min 10 sec",
+        "recovery_length": "15 minutes",
+        "incontinence": ["urine"],
+        "person_injured": False,
+        "qas_called": False,
+        "incident_report": False,
+    },
+    {
+        "awareness": ["responds_to_voice"],
+        "facial_expressions": ["staring_blank"],
+        "body_movement": ["legs", "arms"],
+        "automatic_movement": ["chewing"],
+        "speech": ["unable_to_talk_normally"],
+        "falls": True,
+        "after_seizure": ["confused"],
+        "seizure_length": "1 min 40 sec",
+        "recovery_length": "20 minutes",
+        "person_injured": True,
+        "injury_details": "Graze, left elbow",
+        "qas_called": False,
+        "incident_report": True,
+    },
+]
+
+SEIZURE_TIMES = {
+    Shift.MORNING: ["09:10", "11:40"],
+    Shift.AFTERNOON: ["16:45", "21:05"],
+    Shift.NIGHT: ["02:20", "04:05"],
+}
+
+
+def _add_seizures(record, author):
+    schema = load_schema("seizure_observation", "v02")
+    count = 2 if random.random() < 0.2 else 1
+    for position in range(1, count + 1):
+        raw = dict(
+            random.choice(SEIZURES),
+            start_time=SEIZURE_TIMES[record.shift][position - 1],
+            observer_name=author.get_full_name(),
+            signature={
+                "mode": "typed",
+                "name": f"{author.first_name[0]}. {author.last_name}",
+                "signed_at": record.submitted_at.isoformat(),
+            },
+        )
+        AttachedForm.objects.create(
+            record=record,
+            schema_key="seizure_observation",
+            schema_version="v02",
+            position=position,
+            answers=clean_answers(schema, raw),
+            status=AttachmentStatus.SUBMITTED,
+            created_by=author,
+            submitted_by=author,
+            submitted_at=record.submitted_at,
+        )
 
 
 def _submitted_at(service_date, shift):
@@ -239,6 +312,7 @@ class Command(BaseCommand):
 
         today = timezone.localdate()
         roster = [workers["karen"], workers["priya"], workers["tom"], workers["aisha"]]
+        at_risk = {p.pk for p in people if p.tags.filter(label="Seizure risk").exists()}
         created = 0
 
         for offset in range(days, 0, -1):
@@ -310,6 +384,9 @@ class Command(BaseCommand):
                                 ),
                             ]
                         )
+
+                    if person.pk in at_risk and random.random() < 0.3:
+                        _add_seizures(record, worker)
 
                     try:
                         build_record_document(record)

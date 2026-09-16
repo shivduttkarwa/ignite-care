@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from apps.pdfgen.render import build_selection_pdf
+from apps.records.attachments import forms_for, submitted_count
 from apps.records.filters import base_queryset, filter_records, read_params
 from apps.records.models import AuditEvent, CareRecord, RecordStatus
 
@@ -41,6 +42,8 @@ EXPORT_COLUMNS = [
     ("Fluids", lambda r: (r.answers or {}).get("fluids", "")),
     ("Bowel detail", lambda r: (r.answers or {}).get("bowel", "")),
     ("Urine detail", lambda r: (r.answers or {}).get("urine", "")),
+    ("Forms", lambda r: ", ".join(form["title"] for form in forms_for(r))),
+    ("Seizures", lambda r: submitted_count(r, "seizure_observation")),
 ]
 
 
@@ -53,7 +56,14 @@ def _denied():
     return Response({"detail": "Managers only."}, status=status.HTTP_403_FORBIDDEN)
 
 
+def _selected_ids(request):
+    return [int(value) for value in request.query_params.getlist("id") if value.isdigit()]
+
+
 def _rows(request):
+    ids = _selected_ids(request)
+    if ids:
+        return base_queryset(request.user).filter(pk__in=ids).order_by("service_date")
     return filter_records(base_queryset(request.user), read_params(request.query_params)).order_by(
         "service_date"
     )
@@ -64,7 +74,11 @@ def _audit(request, kind, count):
         actor=request.user,
         action=AuditEvent.Action.EXPORT,
         target=f"records:{kind}",
-        detail={"rows": count, "filters": dict(request.query_params.items())},
+        detail={
+            "rows": count,
+            "filters": dict(request.query_params.items()),
+            "ids": _selected_ids(request),
+        },
     )
 
 

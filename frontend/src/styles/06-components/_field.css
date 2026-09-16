@@ -316,3 +316,22 @@
   background: var(--color-primary-tint);
   border-color: var(--color-primary);
 }
+
+.c-select--inline {
+  width: auto;
+  min-height: 2.75rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.c-select--compact {
+  width: auto;
+  min-height: 2.25rem;
+  padding-block: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.c-repeater__add:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}

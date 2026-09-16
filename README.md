@@ -16,14 +16,15 @@ renders the PDFs and pypdf compiles the books. django-simple-history keeps
 record history, django-otp provides TOTP two-factor and django-axes handles
 lockout.
 
-**Front end** - React 18 with TypeScript, Vite, React Router and TanStack Query.
+**Front end** - React 19 with TypeScript, Vite, React Router, TanStack Query and
+pdf.js for the PDF preview.
 Native CSS in ITCSS layers with BEM naming; no preprocessor, no utility
 framework. Fonts are self-hosted Barlow.
 
 Sign-in uses a **session cookie, not a token**. The cookie is `httpOnly`, so no
 script can read it and a cross-site script cannot walk off with a credential -
 which matters more here than usual, because this is health data. That works
-because in production both halves are served from **one origin**: Caddy serves
+because in production both halves are served from **one origin**: Nginx serves
 the built React files at `/` and reverse-proxies `/api` to gunicorn. One box,
 one certificate, one cookie. A future native app authenticates with a token
 instead, which DRF can issue alongside the session without changing anything the
@@ -33,10 +34,11 @@ web client does.
 
 **Forms are data, not code.** Each form is a versioned JSON schema in
 `forms/schemas/`, served over the API at `/api/schemas/<key>/<version>/`. React
-draws the web form from it; a Django template draws the PDF from it. Adding the
-Bowel Chart is a new schema plus a print template - no new model, migration,
-view or screen. A future native app reads the same schema and gets the same form
-for free.
+draws the web form from it; a Django template draws the PDF from it. A chart
+that attaches to the daily record, like the Seizure Observation Chart, is a
+schema marked `attachable` plus a print template; the attached-form model, API,
+screen and PDF page are shared. A future native app reads the same schema and
+gets the same form for free.
 
 **Answers are hybrid.** They live in a `JSONField`, but the fields the client
 filters and reports on — physio, shower, bowel, urine, fluids — are promoted to
@@ -85,14 +87,39 @@ Open **http://127.0.0.1:5173**. That is the app. Vite proxies `/api` and
 `/media` through to Django on 8811, so the browser sees one origin in
 development too and the session cookie behaves exactly as it will in production.
 
+After the first setup, run `.\start.ps1` from the project root instead. It opens
+Django and Vite in their own windows and prints the addresses, including one
+for a phone on the same wi-fi.
+
 Django on 8811 answers only `/api/` and `/django-admin/`. Opening its root
 returns 404, which is correct.
 
 ### Production
 
-One machine. `npm run build` produces `frontend/dist`; Caddy serves that at `/`
-with an SPA fallback and proxies `/api` to gunicorn. Two processes, one origin,
-one certificate - not two servers.
+One machine. Nginx serves the built React app at `/` with an SPA fallback and
+proxies `/api` and `/django-admin` to gunicorn over a unix socket. Two
+processes, one origin, one certificate - not two servers.
+
+`deploy/setup.sh` builds a fresh Ubuntu 24.04 server end to end: packages,
+PostgreSQL, the gunicorn service, a Let's Encrypt certificate, the Nginx site in
+`deploy/nginx.conf`, the nightly backup and a Django admin login. Run it once as
+`sudo DOMAIN=portal.example.com.au EMAIL=you@example.com bash setup.sh`. After
+that, `.\deploy.ps1` on this machine pushes `main` and runs `deploy/deploy.sh`
+on the server, which migrates, rebuilds the front end and reloads gunicorn.
+
+Nginx overwrites `X-Forwarded-For` with the connecting address and passes
+`X-Forwarded-Proto`. The production settings rely on the second for the HTTPS
+redirect, and `apps.api.auth.client_ip` reads the first for login lockout;
+behind a unix socket there is no other way to see the real address.
+
+Backups run nightly at 2:30am: a PostgreSQL dump kept for 14 days and a mirror
+of the record PDFs, both under `/srv/ignite/backups`. Set `BACKUP_REMOTE` in the
+server's `.env` to an rclone remote to copy them off the server as well.
+
+Do not add a `/media/` location. Record PDFs are named by sequential reference
+and must only leave through the API, which checks access and writes an audit
+event for every download. Serving the directory directly would make any record
+downloadable by guessing its URL.
 
 ### Testing on a phone
 
@@ -133,6 +160,9 @@ Password for every account is `ignite-demo-2026`.
 | `karen`, `priya`, `tom`, `aisha` | Support workers, Acacia and Banksia House |
 | `sonia` | Manager, all three homes |
 
+Django admin at `/django-admin/` needs a superuser:
+`.venv/Scripts/python manage.py createsuperuser`.
+
 ## Tests
 
 ```bash
@@ -140,13 +170,16 @@ Password for every account is `ignite-demo-2026`.
 cd frontend && npx tsc --noEmit     # front end types
 ```
 
-52 tests cover the things that must not break: shift date attribution across
+81 tests cover the things that must not break: shift date attribution across
 midnight, conditional visibility and validation in the schema engine, submission
 locking a record and storing its PDF, hidden answers never being persisted,
 promoted columns tracking the answers, a worker in one home being unable to
 reach a participant in another, the participants list reporting the current
 shift's state so nobody is recorded twice, book compilation, exports carrying
-exactly the rows the screen showed, and role-correct dashboards.
+exactly the rows the screen showed, role-correct dashboards, a seizure chart
+attaching to a draft record, holding back submission until it is finished and
+printing as its own page, bulk export of selected rows, and the Django admin
+opening cleanly.
 
 ## Layout
 
@@ -154,11 +187,12 @@ exactly the rows the screen showed, and role-correct dashboards.
 config/settings/         base.py -> local.py and production.py
 apps/api/                the whole HTTP surface: views, serializers, auth, exports
 apps/people/             Home, Participant, ConditionTag, StaffProfile
-apps/records/            CareRecord, schema engine, shift services, filters
+apps/records/            CareRecord, AttachedForm, schema engine, shift services, filters
 apps/notices/            Notice and read tracking
-apps/pdfgen/             WeasyPrint rendering and book compilation
+apps/pdfgen/             WeasyPrint rendering, chart pages and book compilation
 forms/schemas/           versioned form definitions
 templates/pdf/           print layouts, one per schema version
+deploy/                  server setup, deploy, Nginx, gunicorn and nightly backup
 
 frontend/src/api/        typed fetch client and the API's type surface
 frontend/src/screens/    one file per screen
@@ -167,8 +201,10 @@ frontend/src/styles/     ITCSS layers with BEM naming, no preprocessor
 frontend/public/         logo, icons and fonts
 ```
 
-Django admin is a superuser back door for data repair only. Every screen the
-client sees is React, built to the approved design.
+Django admin at `/django-admin/` is where participants, homes, condition tags,
+staff accounts and notices are added and edited. Care records and the audit log
+are read-only there, so nothing can be changed quietly. Every screen support
+workers and managers use is React, built to the approved design.
 
 ## Interface
 
@@ -187,6 +223,15 @@ Support workers get Today's shift, Participants and Notices. Managers get a
 service overview with completion by property, an outstanding queue, recent
 submissions and quick actions, plus Records, Properties and Care workers.
 
+Charts attach to the daily record. Adding a Seizure Observation Chart opens it
+as its own screen, with a start-now timer, tick-all-that-apply tiles and a drawn
+or typed signature; each seizure is one chart, and the record cannot be
+submitted while one is unfinished. The record's PDF prints the charts as extra
+pages, and the preview screen shows those pages exactly as stored, with print
+and download. Forms save as the worker types, so a closed tab or a dropped
+connection loses nothing. On the Records screen a manager can tick rows to
+export just those, or open a record in a side drawer without leaving the list.
+
 The logo is the real Ignite lockup, keyed off its white background from the
 brand JPG and served as WebP, with PNG app icons generated from the flame mark.
 
@@ -196,15 +241,11 @@ brand JPG and served as WebP, with PNG app icons generated from the flame mark.
   Graph with app-only auth and `Sites.Selected` scoped to one site,
   regenerate-and-replace rather than append. A SharePoint outage must never
   block a submission.
-- **Seizure Observation Chart** as the second form. The schema engine is built
-  for it; this is where it proves itself.
-- **Amendment UI.** The model and PDF rendering exist; the screen does not.
-- **Offline submission.** Drafts persist to `localStorage` so nothing typed is
-  lost, but submitting needs connectivity. Full offline sync was deliberately
-  deferred pending a wifi check in the homes.
-- **Create and edit screens** for participants, care workers, properties and
-  notices. The list and detail screens exist; adding and editing is still
-  Django admin.
-- **PDF preview screen** (screen 6 of the approved design). The PDF downloads;
-  previewing it in the browser before saving does not exist yet.
+- **Amendment UI.** The model and PDF rendering exist; the screen does not, so a
+  submitted record cannot yet be corrected from the portal.
+- **Offline submission.** Work in progress saves to the device and the server as
+  it is typed, but submitting needs connectivity. Full offline sync was
+  deliberately deferred pending a wifi check in the homes.
+- **Add and edit screens** for participants, care workers, properties and
+  notices inside the portal. For Phase 1 these are managed in Django admin.
 - **Two-factor enrolment screens.** django-otp is installed and wired.

@@ -1,0 +1,30 @@
+<section class="chart">
+  {% include "pdf/_brand.html" %}
+  <h1 class="chart__title" style="bookmark-label: '{{ page.schema.pdf_label }}'">{{ page.schema.title }}</h1>
+  <table class="grid">
+    <colgroup>
+      <col class="grid__labelcol">
+      {% for cell in page.rows.0.cells %}<col>{% endfor %}
+    </colgroup>
+    <thead>
+    {% for row in page.rows %}{% if row.kind == "key" %}
+      <tr class="grid__key">
+        <th>{{ row.label }}</th>
+        {% for cell in row.cells %}<td{% if cell.strong %} class="is-strong"{% endif %}>{{ cell.text }}</td>{% endfor %}
+      </tr>
+    {% endif %}{% endfor %}
+    </thead>
+    <tbody>
+    {% for row in page.rows %}
+      {% if row.kind == "heading" %}
+      <tr class="grid__heading"><th colspan="{{ page.span }}">{{ row.label }}</th></tr>
+      {% elif row.kind == "row" %}
+      <tr>
+        <th{% if row.label_strong %} class="is-strong"{% endif %}>{{ row.label }}</th>
+        {% for cell in row.cells %}<td class="{% if cell.strong %}is-strong{% endif %}{% if cell.muted %} is-muted{% endif %}{% if cell.signature %} is-signature{% endif %}">{% if cell.image %}<img src="{{ cell.image }}" alt="Signature">{% else %}{{ cell.text }}{% endif %}</td>{% endfor %}
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</section>

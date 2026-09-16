@@ -8,12 +8,14 @@ ever disagree, that is a bug.
 import datetime as dt
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db import IntegrityError, transaction
+from django.db.models import Max, Q
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,14 +23,24 @@ from rest_framework.views import APIView
 from apps.notices.models import Notice, NoticeRead
 from apps.pdfgen.render import build_participant_book, build_record_document
 from apps.people.models import Participant
+from apps.records.attachments import attachment_label
 from apps.records.filters import base_queryset, filter_records, read_params
-from apps.records.models import AuditEvent, CareRecord, OvernightAttendance, RecordStatus, Shift
+from apps.records.models import (
+    AttachedForm,
+    AttachmentStatus,
+    AuditEvent,
+    CareRecord,
+    OvernightAttendance,
+    RecordStatus,
+    Shift,
+)
 from apps.records.schema import (
+    attachable_schema,
     available_schemas,
-    coerce,
-    is_visible,
-    iter_fields,
+    clean_answers,
+    has_content,
     load_schema,
+    prefilled_answers,
     promoted_values,
     validate,
 )
@@ -42,6 +54,8 @@ from apps.records.services import (
 )
 
 from .serializers import (
+    AttachedFormSerializer,
+    AttachmentWriteSerializer,
     CareRecordDetailSerializer,
     CareRecordListSerializer,
     HomeSerializer,
@@ -53,6 +67,12 @@ from .serializers import (
 
 User = get_user_model()
 DEFAULT_SCHEMA = ("daily_care", "v02")
+
+
+class RecordPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 def _is_manager(user):
@@ -152,6 +172,7 @@ def schema_list(request):
                 "title": s["title"],
                 "short_title": s["short_title"],
                 "badge": s.get("badge", ""),
+                "attachable": s.get("attachable", False),
             }
             for s in available_schemas()
         ]
@@ -221,13 +242,14 @@ def participant_records(request, pk):
         days = int(request.query_params.get("days", 7))
     except ValueError:
         days = 7
-    days = days if days in {7, 14, 30} else 7
+    days = max(1, min(days, 365))
     since = timezone.localdate() - dt.timedelta(days=days - 1)
 
     records = (
         person.records.filter(service_date__gte=since)
         .exclude(status=RecordStatus.DRAFT)
         .select_related("submitted_by__staff_profile", "created_by", "home", "participant")
+        .prefetch_related("attachments")
         .order_by("-service_date", "-submitted_at")
     )
     return Response(
@@ -256,9 +278,7 @@ def record_list(request):
         return Response({"detail": "Managers only."}, status=status.HTTP_403_FORBIDDEN)
 
     records = _filtered_records(request)
-    from rest_framework.pagination import PageNumberPagination
-
-    paginator = PageNumberPagination()
+    paginator = RecordPagination()
     page = paginator.paginate_queryset(records, request)
     return paginator.get_paginated_response(CareRecordListSerializer(page, many=True).data)
 
@@ -266,9 +286,9 @@ def record_list(request):
 @api_view(["GET"])
 def record_detail(request, pk):
     record = get_object_or_404(
-        CareRecord.objects.visible_to(request.user).select_related(
-            "participant", "home", "submitted_by__staff_profile", "created_by"
-        ),
+        CareRecord.objects.visible_to(request.user)
+        .select_related("participant", "home", "submitted_by__staff_profile", "created_by")
+        .prefetch_related("attachments"),
         pk=pk,
     )
     AuditEvent.objects.create(
@@ -307,15 +327,7 @@ def record_start(request):
 
 def _apply(record, schema, payload):
     """Clean the answers, drop hidden ones, and sync the reportable columns."""
-    answers = {}
-    for _section, field in iter_fields(schema):
-        if field["type"] == "repeater":
-            continue
-        answers[field["key"]] = coerce(field, payload.get("answers", {}).get(field["key"]))
-    for _section, field in iter_fields(schema):
-        if field["type"] != "repeater" and not is_visible(field, answers):
-            answers[field["key"]] = None
-
+    answers = clean_answers(schema, payload.get("answers", {}))
     record.answers = answers
     for column, value in promoted_values(schema, answers).items():
         setattr(record, column, value)
@@ -339,6 +351,15 @@ def _save_attendances(record, rows):
             )
         )
     OvernightAttendance.objects.bulk_create(clean)
+
+
+def _unfinished_attachment(record):
+    for attachment in list(record.attachments.filter(status=AttachmentStatus.DRAFT)):
+        schema = load_schema(attachment.schema_key, attachment.schema_version)
+        if has_content(schema, attachment.answers):
+            return attachment
+        attachment.delete()
+    return None
 
 
 @api_view(["PATCH"])
@@ -381,6 +402,18 @@ def record_submit(request, pk):
         record.save()
         _save_attendances(record, payload.validated_data.get("attendances", []))
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    unfinished = _unfinished_attachment(record)
+    if unfinished is not None:
+        record.save()
+        _save_attendances(record, payload.validated_data.get("attendances", []))
+        return Response(
+            {
+                "detail": f"{attachment_label(unfinished)} is not submitted yet. "
+                "Submit it or discard it, then submit this record."
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     record.status = RecordStatus.SUBMITTED
     record.submitted_by = request.user
@@ -446,13 +479,17 @@ def record_pdf(request, pk):
     if document is None:
         raise Http404("No PDF has been generated for this record.")
 
+    inline = request.query_params.get("inline") == "1"
     AuditEvent.objects.create(
-        actor=request.user, action=AuditEvent.Action.DOWNLOAD, target=record.reference
+        actor=request.user,
+        action=AuditEvent.Action.VIEW if inline else AuditEvent.Action.DOWNLOAD,
+        target=record.reference,
+        detail={"pdf": "preview"} if inline else {},
     )
     return FileResponse(
         document.file.open("rb"),
         content_type="application/pdf",
-        as_attachment=True,
+        as_attachment=not inline,
         filename=f"{record.reference}.pdf",
     )
 
@@ -572,6 +609,7 @@ def dashboard(request):
             CareRecord.objects.visible_to(request.user)
             .exclude(status=RecordStatus.DRAFT)
             .select_related("participant", "home", "submitted_by__staff_profile", "created_by")
+            .prefetch_related("attachments")
             .order_by("-submitted_at")[:8]
         )
         return Response(
@@ -607,6 +645,7 @@ def dashboard(request):
             home=home, service_date=prev_date, shift=prev_shift, status=RecordStatus.SUBMITTED
         )
         .select_related("participant", "home", "submitted_by__staff_profile", "created_by")
+        .prefetch_related("attachments")
         .order_by("participant__first_name")[:6]
         if home
         else CareRecord.objects.none()
@@ -707,3 +746,121 @@ def workers(request):
             for u in rows
         ]
     )
+
+
+# Attached forms -------------------------------------------------------------
+
+
+def _attachment(request, pk):
+    return get_object_or_404(
+        AttachedForm.objects.filter(
+            record__in=CareRecord.objects.visible_to(request.user)
+        ).select_related(
+            "record__participant", "created_by__staff_profile", "submitted_by__staff_profile"
+        ),
+        pk=pk,
+    )
+
+
+def _attachment_locked():
+    return Response(
+        {"detail": "The care record this belongs to is submitted, so it can no longer change."},
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+@api_view(["POST"])
+def attachment_create(request, pk):
+    record = get_object_or_404(CareRecord.objects.visible_to(request.user), pk=pk)
+    if not record.is_editable:
+        return Response(
+            {"detail": "This record is submitted, so nothing more can be added to it."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    schema = attachable_schema(str(request.data.get("schema") or ""))
+    if schema is None:
+        return Response(
+            {"detail": "That form cannot be added to a care record."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        with transaction.atomic():
+            last = record.attachments.filter(schema_key=schema["key"]).aggregate(
+                Max("position")
+            )["position__max"]
+            attachment = AttachedForm.objects.create(
+                record=record,
+                schema_key=schema["key"],
+                schema_version=schema["version"],
+                position=(last or 0) + 1,
+                answers=prefilled_answers(schema, request.user),
+                created_by=request.user,
+            )
+    except IntegrityError:
+        return Response(
+            {"detail": "Another one was added at the same moment. Please try again."},
+            status=status.HTTP_409_CONFLICT,
+        )
+    return Response(AttachedFormSerializer(attachment).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "DELETE"])
+def attachment_detail(request, pk):
+    attachment = _attachment(request, pk)
+    if request.method == "DELETE":
+        if not attachment.is_editable:
+            return _attachment_locked()
+        attachment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    return Response(AttachedFormSerializer(attachment).data)
+
+
+def _write_attachment(request, attachment):
+    payload = AttachmentWriteSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    schema = load_schema(attachment.schema_key, attachment.schema_version)
+    answers = clean_answers(schema, payload.validated_data["answers"])
+    if answers != attachment.answers:
+        attachment.status = AttachmentStatus.DRAFT
+        attachment.submitted_by = None
+        attachment.submitted_at = None
+    attachment.answers = answers
+    return schema, answers
+
+
+@api_view(["PATCH"])
+def attachment_save_draft(request, pk):
+    attachment = _attachment(request, pk)
+    if not attachment.is_editable:
+        return _attachment_locked()
+    _write_attachment(request, attachment)
+    attachment.save()
+    return Response(AttachedFormSerializer(attachment).data)
+
+
+@api_view(["POST"])
+def attachment_submit(request, pk):
+    attachment = _attachment(request, pk)
+    if not attachment.is_editable:
+        return _attachment_locked()
+
+    schema, answers = _write_attachment(request, attachment)
+    errors = validate(schema, answers)
+    if errors:
+        attachment.status = AttachmentStatus.DRAFT
+        attachment.save()
+        return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    if attachment.status != AttachmentStatus.SUBMITTED:
+        attachment.status = AttachmentStatus.SUBMITTED
+        attachment.submitted_by = request.user
+        attachment.submitted_at = timezone.now()
+    attachment.save()
+    AuditEvent.objects.create(
+        actor=request.user,
+        action=AuditEvent.Action.SUBMIT,
+        target=f"{attachment.record.reference} {attachment_label(attachment)}",
+    )
+    return Response(AttachedFormSerializer(attachment).data)

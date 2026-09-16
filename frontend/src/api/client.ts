@@ -88,8 +88,15 @@ export function download(path: string): void {
   window.location.href = `${BASE}${path}`;
 }
 
+export async function fetchBlob(path: string, signal?: AbortSignal): Promise<Blob> {
+  const response = await fetch(`${BASE}${path}`, { credentials: "same-origin", signal });
+  if (!response.ok) throw new ApiError(response.status, `Request failed (${response.status})`);
+  return response.blob();
+}
+
 export const api = {
   get: <T,>(path: string, signal?: AbortSignal) => request<T>(path, { signal }),
   post: <T,>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
   patch: <T,>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
+  delete: <T,>(path: string) => request<T>(path, { method: "DELETE" }),
 };

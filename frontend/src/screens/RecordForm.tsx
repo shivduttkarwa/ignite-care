@@ -1,59 +1,30 @@
-/**
- * The daily care record, rendered entirely from the JSON schema.
- *
- * Nothing here knows what a "shower" or a "bowel" is. Add a form to
- * forms/schemas/ on the server and this screen renders it with no release.
- */
-
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ApiError } from "../api/client";
-import type { Attendance, CareRecordDetail, FormSchema, SchemaField } from "../api/types";
+import type {
+  AttachedForm,
+  Attendance,
+  CareRecordDetail,
+  FormSchema,
+  Me,
+  SchemaField,
+  SchemaSection,
+  SchemaSummary,
+} from "../api/types";
 import { AppFrame } from "../components/AppFrame";
 import { Icon } from "../components/Icons";
-import { ErrorState, Loading, longDate } from "../components/bits";
+import { ErrorState, Loading } from "../components/bits";
+import { formBadgeClass, mediumDate } from "../lib/format";
+import { SchemaFieldControl } from "../components/form/Fields";
+import { FormSection } from "../components/form/FormSection";
+import { SaveStatus } from "../components/form/SaveStatus";
 import { useMe } from "../lib/auth";
+import { restoreDraft, useAutosave, wasSaved } from "../lib/autosave";
+import { type Answers, isVisible, sectionCounts } from "../lib/schema";
 
-type Answers = Record<string, unknown>;
-
-/* Schema helpers ------------------------------------------------------------ */
-
-function normalise(value: unknown): unknown {
-  if (value === true) return "true";
-  if (value === false) return "false";
-  return value;
-}
-
-function isVisible(field: SchemaField, answers: Answers): boolean {
-  if (!field.show_if?.all) return true;
-  return field.show_if.all.every((clause) => {
-    const value = answers[clause.field];
-    if ("eq" in clause) return normalise(value) === normalise(clause.eq);
-    if ("filled" in clause) return Boolean(value) === clause.filled;
-    return true;
-  });
-}
-
-function isFilled(value: unknown): boolean {
-  if (value === null || value === undefined) return false;
-  if (Array.isArray(value)) return value.length > 0;
-  return value !== "";
-}
-
-function sectionCounts(fields: SchemaField[], answers: Answers, rows: Attendance[]) {
-  let filled = 0;
-  let total = 0;
-  for (const field of fields) {
-    if (!isVisible(field, answers)) continue;
-    total += 1;
-    if (field.type === "repeater" ? rows.length > 0 : isFilled(answers[field.key])) filled += 1;
-  }
-  return { filled, total };
-}
-
-/* Screen -------------------------------------------------------------------- */
+const COMING_LATER = ["Bowel Chart", "Food Chart", "Bruise Chart"];
 
 export default function RecordForm({ mode }: { mode: "new" | "edit" }) {
   const params = useParams();
@@ -96,6 +67,10 @@ export default function RecordForm({ mode }: { mode: "new" | "edit" }) {
     staleTime: 60 * 60_000,
   });
 
+  useEffect(() => {
+    if (record.data?.is_locked) navigate(`/records/${record.data.id}`, { replace: true });
+  }, [record.data, navigate]);
+
   if (!me) return null;
 
   const busy = start.isPending || record.isPending || schema.isPending;
@@ -113,10 +88,12 @@ export default function RecordForm({ mode }: { mode: "new" | "edit" }) {
     >
       {failure && <ErrorState error={failure} />}
       {busy && !failure && <Loading label="Opening the record" />}
-      {record.data && schema.data && !failure && (
+      {record.data && schema.data && !failure && !record.data.is_locked && (
         <Editor
+          key={record.data.id}
           record={record.data}
           schema={schema.data}
+          me={me}
           onSubmitted={(saved) => {
             queryClient.setQueryData(["record", saved.id], saved);
             queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -129,64 +106,81 @@ export default function RecordForm({ mode }: { mode: "new" | "edit" }) {
   );
 }
 
-/* Editor -------------------------------------------------------------------- */
-
 function Editor({
   record,
   schema,
+  me,
   onSubmitted,
 }: {
   record: CareRecordDetail;
   schema: FormSchema;
+  me: Me;
   onSubmitted: (saved: CareRecordDetail) => void;
 }) {
-  const [answers, setAnswers] = useState<Answers>(() => ({ ...record.answers }));
-  const [rows, setRows] = useState<Attendance[]>(() => record.attendances ?? []);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const storageKey = `ignite:draft:record-${record.id}`;
+
+  const [initial] = useState(() =>
+    restoreDraft(storageKey, record.updated_at, { answers: record.answers, rows: record.attendances }),
+  );
+  const [answers, setAnswers] = useState<Answers>(() => ({ ...initial.value.answers }));
+  const [rows, setRows] = useState<Attendance[]>(() => initial.value.rows);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(schema.sections.map((s) => [s.key, true])),
   );
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const queryClient = useQueryClient();
 
-  const draftKey = `ignite:draft:record-${record.id}`;
+  const schemas = useQuery({
+    queryKey: ["schemas"],
+    queryFn: () => api.get<SchemaSummary[]>("/schemas/"),
+    staleTime: 60 * 60_000,
+  });
 
-  // A dropped connection mid-shift must not lose what was typed.
-  useEffect(() => {
-    try {
-      localStorage.setItem(draftKey, JSON.stringify({ answers, rows, at: Date.now() }));
-    } catch {
-      /* private mode, or storage full - the server copy is still authoritative */
-    }
-  }, [answers, rows, draftKey]);
-
-  const save = useMutation({
-    mutationFn: () => api.patch<CareRecordDetail>(`/records/${record.id}/draft/`, { answers, attendances: rows }),
-    onSuccess: (saved) => {
-      setSavedAt(new Date());
+  const autosave = useAutosave({
+    storageKey,
+    value: { answers, rows },
+    initiallyDirty: initial.restored,
+    lastSavedAt: wasSaved(record.created_at, record.updated_at) ? record.updated_at : null,
+    save: async (value) => {
+      const saved = await api.patch<CareRecordDetail>(`/records/${record.id}/draft/`, {
+        answers: value.answers,
+        attendances: value.rows,
+      });
       queryClient.setQueryData(["record", saved.id], saved);
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 
   const submit = useMutation({
-    mutationFn: () =>
-      api.post<CareRecordDetail>(`/records/${record.id}/submit/`, { answers, attendances: rows }),
+    mutationFn: () => {
+      autosave.cancel();
+      return api.post<CareRecordDetail>(`/records/${record.id}/submit/`, { answers, attendances: rows });
+    },
     onSuccess: (saved) => {
-      try {
-        localStorage.removeItem(draftKey);
-      } catch { /* nothing to clear */ }
+      autosave.stop();
       onSubmitted(saved);
     },
     onError: (error) => {
-      if (error instanceof ApiError) {
-        setErrors(error.fieldErrors);
-        // Open every section holding a problem so nothing hides.
-        const holding = schema.sections
-          .filter((s) => s.fields.some((f) => error.fieldErrors[f.key]))
-          .map((s) => s.key);
-        if (holding.length) setOpen((prev) => ({ ...prev, ...Object.fromEntries(holding.map((k) => [k, true])) }));
+      const fieldErrors = error instanceof ApiError ? error.fieldErrors : {};
+      setErrors(fieldErrors);
+      // Open every section holding a problem so nothing hides.
+      const holding = schema.sections
+        .filter((s) => s.fields.some((f) => fieldErrors[f.key]))
+        .map((s) => s.key);
+      if (holding.length) {
+        setOpen((prev) => ({ ...prev, ...Object.fromEntries(holding.map((k) => [k, true])) }));
       }
+    },
+  });
+
+  const attach = useMutation({
+    mutationFn: async (schemaKey: string) => {
+      await autosave.flush();
+      return api.post<AttachedForm>(`/records/${record.id}/attachments/`, { schema: schemaKey });
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["record", record.id] });
+      navigate(`/records/${record.id}/attachments/${created.id}`);
     },
   });
 
@@ -195,16 +189,44 @@ function Editor({
     setErrors((prev) => (prev[key] ? { ...prev, [key]: "" } : prev));
   };
 
-  const errorCount = useMemo(
-    () => Object.values(errors).filter(Boolean).length,
-    [errors],
-  );
+  const errorCount = useMemo(() => Object.values(errors).filter(Boolean).length, [errors]);
+  const attachable = (schemas.data ?? []).filter((form) => form.attachable);
+
+  const renderField = (section: SchemaSection, field: SchemaField) => {
+    if (field.group) {
+      const members = section.fields.filter((member) => member.group === field.group);
+      if (members[0] !== field) return null;
+      return <TimeRange key={field.group} fields={members} answers={answers} onChange={set} />;
+    }
+    if (field.type === "repeater") {
+      return (
+        <Repeater
+          key={field.key}
+          field={field}
+          rows={rows}
+          setRows={setRows}
+          participant={record.participant_name}
+        />
+      );
+    }
+    if (!isVisible(field, answers)) return null;
+    return (
+      <SchemaFieldControl
+        key={field.key}
+        field={field}
+        value={answers[field.key]}
+        error={errors[field.key]}
+        onChange={(value) => set(field.key, value)}
+        context={{ setAnswer: set }}
+      />
+    );
+  };
 
   return (
     <form
       className="o-stack"
-      onSubmit={(e) => {
-        e.preventDefault();
+      onSubmit={(event) => {
+        event.preventDefault();
         submit.mutate();
       }}
     >
@@ -212,17 +234,12 @@ function Editor({
         <div>
           <p className="c-formhead__name">{record.participant_name}</p>
           <p className="c-formhead__meta">
-            {longDate(record.service_date)} · {record.shift_label}
+            {mediumDate(record.service_date)} · {record.shift_label} · {me.full_name}
           </p>
         </div>
-        {savedAt && (
-          <p className="c-formhead__state">
-            <span className="c-savestate">
-              <Icon name="check" />
-              Draft saved
-            </span>
-          </p>
-        )}
+        <p className="c-formhead__state">
+          <SaveStatus state={autosave.state} savedAt={autosave.savedAt} />
+        </p>
       </header>
 
       {errorCount > 0 && (
@@ -235,71 +252,93 @@ function Editor({
         </div>
       )}
 
-      {schema.sections.map((section) => {
-        const counts = sectionCounts(section.fields, answers, rows);
-        const done = counts.total > 0 && counts.filled === counts.total;
-        return (
-          <section key={section.key} className="c-section">
-            <button
-              type="button"
-              className="c-section__toggle"
-              aria-expanded={open[section.key]}
-              aria-controls={`section-${section.key}`}
-              onClick={() => setOpen((prev) => ({ ...prev, [section.key]: !prev[section.key] }))}
-            >
-              <span className="c-section__title">{section.title}</span>
-              <span className={`c-section__count${done ? " c-section__count--done" : ""}`}>
-                {counts.filled} of {counts.total} answered
-              </span>
-              <Icon name="chevron-down" className="c-section__chevron" />
-            </button>
+      {submit.isError && errorCount === 0 && (
+        <div className="c-callout c-callout--danger" role="alert">
+          <Icon name="alert-circle" />
+          <span>{submit.error.message}</span>
+        </div>
+      )}
 
-            {open[section.key] && (
-              <div className="c-section__body" id={`section-${section.key}`}>
-                {section.fields.map((field) => {
-                  if (field.group === "sleep" && field.key !== "sleep_from") return null;
-                  if (field.group === "sleep") {
-                    return (
-                      <div className="c-field" key={field.key}>
-                        <label className="c-field__label" htmlFor="sleep_from">{field.label}</label>
-                        <div className="c-timerange">
-                          <input className="c-input c-input--time" type="time" id="sleep_from"
-                                 value={(answers.sleep_from as string) ?? ""}
-                                 onChange={(e) => set("sleep_from", e.target.value)} />
-                          <span className="c-timerange__sep">to</span>
-                          <input className="c-input c-input--time" type="time" aria-label="Slept until"
-                                 value={(answers.sleep_to as string) ?? ""}
-                                 onChange={(e) => set("sleep_to", e.target.value)} />
-                        </div>
-                      </div>
-                    );
-                  }
-                  if (field.type === "repeater") {
-                    return (
-                      <Repeater key={field.key} field={field} rows={rows} setRows={setRows}
-                                participant={record.participant_name} />
-                    );
-                  }
-                  if (!isVisible(field, answers)) return null;
-                  return (
-                    <Field key={field.key} field={field} value={answers[field.key]}
-                           error={errors[field.key]} onChange={(v) => set(field.key, v)} />
-                  );
-                })}
-              </div>
+      {schema.sections.map((section) => (
+        <FormSection
+          key={section.key}
+          id={`section-${section.key}`}
+          title={section.title}
+          counts={sectionCounts(section, answers, rows.length)}
+          collapsible={schema.collapsible !== false}
+          open={open[section.key]}
+          onToggle={() => setOpen((prev) => ({ ...prev, [section.key]: !prev[section.key] }))}
+        >
+          {section.fields.map((field) => renderField(section, field))}
+        </FormSection>
+      ))}
+
+      {(attachable.length > 0 || record.attachments.length > 0) && (
+        <section className="c-section">
+          <div className="c-section__intro">
+            <h2 className="c-section__title">Did anything else happen this shift?</h2>
+            <p className="c-field__help">Attach extra forms to this same record.</p>
+          </div>
+          <div className="c-section__body">
+            {record.attachments.map((item) => (
+              <Link
+                key={item.id}
+                className="c-attach"
+                to={`/records/${record.id}/attachments/${item.id}`}
+              >
+                <span className={["c-formbadge", formBadgeClass(item.schema_key)].filter(Boolean).join(" ")}>
+                  {item.badge}
+                </span>
+                <span className="c-attach__text">
+                  <strong>{item.label}</strong>
+                  {item.description && ` · ${item.description}`}
+                </span>
+                {item.status === "draft" && <span className="c-pill c-pill--draft">Draft</span>}
+                <span className="c-attach__open">Open</span>
+              </Link>
+            ))}
+
+            {attachable.map((form) => (
+              <button
+                key={form.key}
+                type="button"
+                className="c-repeater__add"
+                disabled={attach.isPending}
+                onClick={() => attach.mutate(form.key)}
+              >
+                <Icon name="plus" className="c-btn__icon" />
+                Add {form.title}
+              </button>
+            ))}
+
+            {attach.isError && (
+              <p className="c-field__error" role="alert">
+                <Icon name="alert-circle" />
+                {attach.error.message}
+              </p>
             )}
-          </section>
-        );
-      })}
 
-      <div className="c-callout">
-        <Icon name="alert-circle" />
-        <span>{schema.footer_note}</span>
-      </div>
+            <div className="c-attach__later">
+              {COMING_LATER.map((name) => (
+                <span key={name} className="c-attach__soon">
+                  {name} · coming later
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {schema.footer_note && <p className="c-callout c-callout--strong">{schema.footer_note}</p>}
 
       <div className="c-actionbar">
-        <button type="button" className="c-btn" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Saving…" : "Save draft"}
+        <button
+          type="button"
+          className="c-btn"
+          onClick={() => void autosave.flush()}
+          disabled={autosave.state === "saving"}
+        >
+          {autosave.state === "saving" ? "Saving…" : "Save draft"}
         </button>
         <button type="submit" className="c-btn c-btn--primary" disabled={submit.isPending}>
           {submit.isPending ? "Submitting…" : "Submit record"}
@@ -309,94 +348,42 @@ function Editor({
   );
 }
 
-/* Fields --------------------------------------------------------------------- */
-
-function Field({
-  field,
-  value,
-  error,
+function TimeRange({
+  fields,
+  answers,
   onChange,
 }: {
-  field: SchemaField;
-  value: unknown;
-  error?: string;
-  onChange: (value: unknown) => void;
+  fields: SchemaField[];
+  answers: Answers;
+  onChange: (key: string, value: unknown) => void;
 }) {
-  const invalid = Boolean(error);
-  const describedBy = invalid ? `${field.key}_error` : undefined;
-
+  const [from, to] = fields;
   return (
-    <div className={`c-field${invalid ? " c-field--invalid" : ""}`}>
-      {field.type === "yesno" ? (
-        <fieldset>
-          <legend className="c-field__label">
-            {field.label}
-            {field.required && <span aria-hidden="true"> *</span>}
-          </legend>
-          <div className="c-yesno">
-            {[
-              { v: "true", label: "Yes" },
-              { v: "false", label: "No" },
-            ].map((option) => (
-              <div className="c-yesno__option" key={option.v}>
-                <input
-                  className="c-yesno__input"
-                  type="radio"
-                  id={`${field.key}_${option.v}`}
-                  name={field.key}
-                  value={option.v}
-                  checked={normalise(value) === option.v}
-                  onChange={() => onChange(option.v)}
-                  aria-describedby={describedBy}
-                />
-                <label className="c-yesno__face" htmlFor={`${field.key}_${option.v}`}>
-                  <Icon name="check" />
-                  {option.label}
-                </label>
-              </div>
-            ))}
-          </div>
-        </fieldset>
-      ) : (
-        <>
-          <label className="c-field__label" htmlFor={`f_${field.key}`}>
-            {field.label}
-            {field.required && <span aria-hidden="true"> *</span>}
-          </label>
-          {field.type === "textarea" ? (
-            <textarea
-              className="c-textarea"
-              id={`f_${field.key}`}
-              rows={2}
-              placeholder={field.placeholder}
-              value={(value as string) ?? ""}
-              onChange={(e) => onChange(e.target.value)}
-              aria-invalid={invalid || undefined}
-              aria-describedby={describedBy}
-            />
-          ) : (
+    <div className="c-field">
+      <label className="c-field__label" htmlFor={`f_${from.key}`}>
+        {from.label}
+      </label>
+      <div className="c-timerange">
+        <input
+          className="c-input c-input--time"
+          type="time"
+          id={`f_${from.key}`}
+          value={(answers[from.key] as string) ?? ""}
+          onChange={(e) => onChange(from.key, e.target.value)}
+        />
+        {to && (
+          <>
+            <span className="c-timerange__sep">{to.label}</span>
             <input
-              className={`c-input${field.type === "time" ? " c-input--time" : ""}`}
-              id={`f_${field.key}`}
-              type={field.type === "number" ? "number" : field.type === "time" ? "time" : "text"}
-              inputMode={field.type === "number" ? "numeric" : undefined}
-              placeholder={field.placeholder}
-              value={(value as string) ?? ""}
-              onChange={(e) => onChange(e.target.value)}
-              aria-invalid={invalid || undefined}
-              aria-describedby={describedBy}
+              className="c-input c-input--time"
+              type="time"
+              aria-label={`${from.group_label ?? from.label} until`}
+              value={(answers[to.key] as string) ?? ""}
+              onChange={(e) => onChange(to.key, e.target.value)}
             />
-          )}
-        </>
-      )}
-
-      {field.help && <p className="c-field__help">{field.help}</p>}
-      {error && (
-        <p className="c-field__error" id={`${field.key}_error`} role="alert">
-          <Icon name="alert-circle" />
-          {error}
-        </p>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

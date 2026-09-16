@@ -57,3 +57,8 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# Nginx overwrites X-Forwarded-For with the connecting address, so a client cannot forge it.
+def client_ip(request):
+    return request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR")

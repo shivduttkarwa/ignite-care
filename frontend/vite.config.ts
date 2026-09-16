@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
-    // In production Caddy serves the build at / and proxies /api to Django, so
+    // In production Nginx serves the build at / and proxies /api to Django, so
     // both live on one origin. This mirrors that in development, which keeps
     // the session cookie working exactly the same way.
     proxy: {

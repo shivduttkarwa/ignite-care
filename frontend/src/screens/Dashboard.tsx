@@ -20,10 +20,8 @@ import {
   Progress,
   StatTile,
   StatusPill,
-  clock,
-  longDate,
-  shortDate,
 } from "../components/bits";
+import { clock, dayAndTime, longDate, shortDate } from "../lib/format";
 import { useMe } from "../lib/auth";
 
 export default function Dashboard() {
@@ -71,16 +69,12 @@ function WorkerView({ data }: { data: WorkerDashboard }) {
   const [target, setTarget] = useState<Participant | null>(null);
   const [reason, setReason] = useState("");
 
-  const notices = useQuery({
-    queryKey: ["notices"],
-    queryFn: () => api.get<{ unread_count: number; results: Notice[] }>("/notices/"),
-  });
-
   const switchHome = useMutation({
     mutationFn: (home: number) => api.post("/homes/switch/", { home }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["me"] });
+      queryClient.invalidateQueries({ queryKey: ["notices"] });
     },
   });
 
@@ -145,18 +139,8 @@ function WorkerView({ data }: { data: WorkerDashboard }) {
         </form>
       </dialog>
 
-      <div className="c-pagehead">
-        <div>
-          <h1 className="c-pagehead__title">Today's shift</h1>
-          <p className="c-pagehead__sub">
-            {longDate(data.shift.service_date)} · <strong>{data.shift.label}</strong>
-            {data.home && ` · ${data.home.label}`}
-          </p>
-        </div>
-      </div>
-
       {me && me.homes.length > 1 && (
-        <nav className="c-homes" aria-label="Choose the home you are working in today">
+        <nav className="c-homes c-homes--flush" aria-label="Choose the home you are working in today">
           {me.homes.map((home) => (
             <button
               key={home.id}
@@ -172,36 +156,17 @@ function WorkerView({ data }: { data: WorkerDashboard }) {
         </nav>
       )}
 
-      <div className="c-stats">
-        <StatTile
-          label="Complete" icon="check" tone="positive"
-          value={data.done_count} unit={` / ${data.total_count}`}
-          note={`${data.progress_pct}% of this shift`}
-        />
-        <StatTile
-          label="Still to do" icon="circle"
-          tone={data.outstanding_count ? "caution" : undefined}
-          value={data.outstanding_count}
-          note={data.outstanding_count ? "records outstanding" : "All done, nice work"}
-        />
-        <StatTile
-          label="Participants" icon="users" tone="flame"
-          value={data.total_count}
-          note={data.home ? `in ${data.home.label}` : "in your homes"}
-        />
-        <StatTile
-          label="Notices" icon="bell" tone="accent"
-          value={notices.data?.unread_count ?? 0}
-          note={notices.data?.unread_count ? "unread for you" : "nothing new"}
-        />
-      </div>
+      <p className="c-shiftline c-shiftline--flush">
+        {longDate(data.shift.service_date)} · <strong>{data.shift.label}</strong>
+        {me?.full_name ? ` · ${me.full_name}` : ""}
+      </p>
 
       <div className="c-columns">
         <div className="o-stack">
           <div className="c-blockhead">
-            <h2 className="c-blockhead__title">Records for this shift</h2>
+            <h1 className="c-blockhead__title">Today's shift</h1>
             <p className="c-blockhead__meta u-nums">
-              {data.done_count} of {data.total_count} complete
+              {data.done_count} of {data.total_count} records complete
             </p>
           </div>
 
@@ -230,51 +195,51 @@ function WorkerView({ data }: { data: WorkerDashboard }) {
         </div>
 
         <div className="c-columns__rail">
-          <section className="c-panel">
-            <div className="c-panel__head">
-              <h2 className="c-panel__title">Handover</h2>
-              <p className="c-panel__meta">
-                {data.handover.shift_label}, {shortDate(data.handover.service_date)}
-              </p>
-            </div>
-            {data.handover.records.length ? (
-              <div className="c-plist">
-                {data.handover.records.map((record) => (
-                  <Link key={record.id} className="c-plist__item" to={`/records/${record.id}`}>
-                    <span className="c-avatar c-avatar--sm" aria-hidden="true">
-                      {record.participant_initials}
-                    </span>
-                    <span className="c-plist__main">
-                      <span className="c-plist__title">{record.participant_name}</span>
-                      <span className="c-plist__sub">{record.summary.join(" · ")}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="c-panel__body">
-                <p className="u-small u-muted">
-                  No records were lodged on the {data.handover.shift_label.toLowerCase()}.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <NoticesPanel notices={notices.data?.results ?? []} unread={notices.data?.unread_count ?? 0} />
+          <NoticesBlock />
+          <HandoverPanel handover={data.handover} />
         </div>
       </div>
     </>
   );
 }
 
+function HandoverPanel({ handover }: { handover: WorkerDashboard["handover"] }) {
+  return (
+    <section className="c-panel u-desktop-only">
+      <div className="c-panel__head">
+        <h2 className="c-panel__title">Handover</h2>
+        <p className="c-panel__meta">
+          {handover.shift_label}, {shortDate(handover.service_date)}
+        </p>
+      </div>
+      {handover.records.length ? (
+        <div className="c-plist">
+          {handover.records.map((record) => (
+            <Link key={record.id} className="c-plist__item" to={`/records/${record.id}`}>
+              <span className="c-avatar c-avatar--sm" aria-hidden="true">
+                {record.participant_initials}
+              </span>
+              <span className="c-plist__main">
+                <span className="c-plist__title">{record.participant_name}</span>
+                <span className="c-plist__sub">{record.summary.join(" · ")}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="c-panel__body">
+          <p className="u-small u-muted">
+            No records were lodged on the {handover.shift_label.toLowerCase()}.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* Manager -------------------------------------------------------------------- */
 
 function ManagerView({ data }: { data: ManagerDashboard }) {
-  const notices = useQuery({
-    queryKey: ["notices"],
-    queryFn: () => api.get<{ unread_count: number; results: Notice[] }>("/notices/"),
-  });
-
   return (
     <>
       <div className="c-pagehead">
@@ -401,48 +366,76 @@ function ManagerView({ data }: { data: ManagerDashboard }) {
         </div>
 
         <div className="c-columns__rail">
-          <NoticesPanel notices={notices.data?.results ?? []} unread={notices.data?.unread_count ?? 0} />
+          <NoticesBlock />
         </div>
       </div>
     </>
   );
 }
 
-function NoticesPanel({ notices, unread }: { notices: Notice[]; unread: number }) {
+/* Notices ------------------------------------------------------------------- */
+
+function NoticesBlock() {
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const notices = useQuery({
+    queryKey: ["notices"],
+    queryFn: () => api.get<{ unread_count: number; results: Notice[] }>("/notices/"),
+  });
+
+  const all = notices.data?.results ?? [];
+  const unread = notices.data?.unread_count ?? 0;
+  const shown = (filter === "unread" ? all.filter((notice) => notice.is_unread) : all).slice(0, 3);
+
   return (
-    <section className="c-panel">
-      <div className="c-panel__head">
-        <h2 className="c-panel__title">Notices</h2>
-        {unread > 0 && (
-          <p className="c-panel__meta">
-            <span className="c-pill c-pill--pending">{unread} unread</span>
+    <section className="o-stack o-stack--tight" aria-labelledby="notices-title">
+      <div className="c-blockhead">
+        <h2 className="c-blockhead__title" id="notices-title">
+          Notices
+        </h2>
+        <div className="c-blockhead__meta">
+          <div className="c-switch" role="group" aria-label="Show notices">
+            <button
+              type="button"
+              className="c-switch__item"
+              aria-current={filter === "all" ? "true" : undefined}
+              onClick={() => setFilter("all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className="c-switch__item"
+              aria-current={filter === "unread" ? "true" : undefined}
+              onClick={() => setFilter("unread")}
+            >
+              Unread
+              {unread > 0 && <span className="c-switch__count">{unread}</span>}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {shown.map((notice) => (
+        <article key={notice.id} className={`c-notice${notice.is_unread ? " c-notice--unread" : ""}`}>
+          <p className="c-notice__meta">
+            {notice.is_unread && <span className="c-notice__dot" aria-hidden="true" />}
+            {notice.author_name}
+            {notice.author_is_manager && " (Manager)"} · {dayAndTime(notice.published_at)}
           </p>
-        )}
-      </div>
-      <div className="c-panel__body">
-        {notices.slice(0, 3).map((notice) => (
-          <article
-            key={notice.id}
-            className={`c-notice${notice.is_unread ? " c-notice--unread" : ""}`}
-            style={{ border: 0, padding: "0 0 0 var(--space-3)" }}
-          >
-            <p className="c-notice__meta">
-              {notice.is_unread && <span className="c-notice__dot" aria-hidden="true" />}
-              {notice.author_name} · {shortDate(notice.published_at.slice(0, 10))}
-            </p>
-            <h3 className="c-notice__title" style={{ fontSize: "var(--text-sm)" }}>
-              {notice.title}
-            </h3>
-            <p className="c-notice__body">{notice.body}</p>
-          </article>
-        ))}
-        {notices.length === 0 && <p className="u-small u-muted">No notices right now.</p>}
-      </div>
-      <div className="c-panel__foot">
-        <Link className="c-link-action" to="/notices">
-          All notices
-        </Link>
-      </div>
+          <h3 className="c-notice__title">{notice.title}</h3>
+          <p className="c-notice__body">{notice.body}</p>
+        </article>
+      ))}
+
+      {!notices.isPending && shown.length === 0 && (
+        <p className="u-small u-muted">
+          {filter === "unread" ? "You are up to date." : "No notices right now."}
+        </p>
+      )}
+
+      <Link className="c-link-action" to="/notices">
+        All notices
+      </Link>
     </section>
   );
 }
