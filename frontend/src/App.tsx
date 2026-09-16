@@ -1,5 +1,12 @@
 import { Suspense, lazy } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+  useLocation,
+  type RouteObject,
+} from "react-router-dom";
 
 import { IconSprite } from "./components/Icons";
 import { useMe } from "./lib/auth";
@@ -25,7 +32,16 @@ function Pending() {
   );
 }
 
-function Protected({ children }: { children: React.ReactNode }) {
+function Root() {
+  return (
+    <>
+      <IconSprite />
+      <Outlet />
+    </>
+  );
+}
+
+function Protected() {
   const { data: me, isPending, isError } = useMe();
   const location = useLocation();
 
@@ -33,74 +49,58 @@ function Protected({ children }: { children: React.ReactNode }) {
   if (isError || !me) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
-  return <>{children}</>;
+  return <Outlet />;
 }
 
 /* The API refuses these anyway; this turns a 403 into a sensible landing. */
-function ManagerOnly({ children }: { children: React.ReactNode }) {
+function ManagerOnly() {
   const { data: me } = useMe();
   if (!me) return null;
   if (!me.is_manager) return <Navigate to="/" replace />;
-  return <>{children}</>;
+  return <Outlet />;
 }
 
+const routes: RouteObject[] = [
+  {
+    element: <Root />,
+    children: [
+      { path: "/login", element: <Login /> },
+      {
+        element: <Protected />,
+        children: [
+          { index: true, element: <Dashboard /> },
+          { path: "participants", element: <Participants /> },
+          { path: "participants/:id", element: <ParticipantDetail /> },
+          { path: "participants/:id/record/new", element: <RecordForm mode="new" /> },
+          { path: "records/:id", element: <RecordDetail /> },
+          { path: "records/:id/edit", element: <RecordForm mode="edit" /> },
+          {
+            path: "records/:id/preview",
+            element: (
+              <Suspense fallback={<Pending />}>
+                <RecordPreview />
+              </Suspense>
+            ),
+          },
+          { path: "records/:recordId/attachments/:id", element: <AttachmentForm /> },
+          { path: "notices", element: <Notices /> },
+          {
+            element: <ManagerOnly />,
+            children: [
+              { path: "records", element: <Records /> },
+              { path: "properties", element: <Properties /> },
+              { path: "care-workers", element: <Workers /> },
+            ],
+          },
+          { path: "*", element: <Navigate to="/" replace /> },
+        ],
+      },
+    ],
+  },
+];
+
+const router = createBrowserRouter(routes);
+
 export default function App() {
-  return (
-    <>
-      <IconSprite />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="*"
-          element={
-            <Protected>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/participants" element={<Participants />} />
-                <Route path="/participants/:id" element={<ParticipantDetail />} />
-                <Route path="/participants/:id/record/new" element={<RecordForm mode="new" />} />
-                <Route
-                  path="/records"
-                  element={
-                    <ManagerOnly>
-                      <Records />
-                    </ManagerOnly>
-                  }
-                />
-                <Route path="/records/:id" element={<RecordDetail />} />
-                <Route path="/records/:id/edit" element={<RecordForm mode="edit" />} />
-                <Route
-                  path="/records/:id/preview"
-                  element={
-                    <Suspense fallback={<Pending />}>
-                      <RecordPreview />
-                    </Suspense>
-                  }
-                />
-                <Route path="/records/:recordId/attachments/:id" element={<AttachmentForm />} />
-                <Route path="/notices" element={<Notices />} />
-                <Route
-                  path="/properties"
-                  element={
-                    <ManagerOnly>
-                      <Properties />
-                    </ManagerOnly>
-                  }
-                />
-                <Route
-                  path="/care-workers"
-                  element={
-                    <ManagerOnly>
-                      <Workers />
-                    </ManagerOnly>
-                  }
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Protected>
-          }
-        />
-      </Routes>
-    </>
-  );
+  return <RouterProvider router={router} />;
 }

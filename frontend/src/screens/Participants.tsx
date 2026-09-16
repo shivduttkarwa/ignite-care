@@ -89,9 +89,10 @@ export default function Participants() {
               {rows.length} participant{rows.length === 1 ? "" : "s"}
             </p>
           </div>
-          {rows.map((person) => (
+          {rows.map((person, index) => (
             <ParticipantRow
               key={person.id}
+              index={index}
               participant={person}
               state={person.shift_state}
               isDone={person.shift_is_done}

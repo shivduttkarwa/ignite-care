@@ -281,6 +281,61 @@
   gap: var(--space-5);
 }
 
+/* Each screen settles in a block at a time. Kept small on purpose: a care
+   worker opens this dozens of times a shift. */
+@media (prefers-reduced-motion: no-preference) {
+  .c-page > * {
+    animation: page-enter var(--dur) var(--ease-out) backwards;
+  }
+
+  .c-page > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .c-page > *:nth-child(2) {
+    animation-delay: 45ms;
+  }
+
+  .c-page > *:nth-child(3) {
+    animation-delay: 90ms;
+  }
+
+  .c-page > *:nth-child(4) {
+    animation-delay: 135ms;
+  }
+
+  .c-page > *:nth-child(5) {
+    animation-delay: 180ms;
+  }
+
+  .c-page > *:nth-child(6) {
+    animation-delay: 225ms;
+  }
+
+  .c-page > *:nth-child(7) {
+    animation-delay: 270ms;
+  }
+
+  .c-page > *:nth-child(8) {
+    animation-delay: 315ms;
+  }
+
+  .c-page > *:nth-child(n + 9) {
+    animation-delay: 360ms;
+  }
+
+  .c-signin__card {
+    animation: page-enter var(--dur-slow) var(--ease-out) backwards;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 .c-page--narrow {
   --page-max: 46rem;
 }

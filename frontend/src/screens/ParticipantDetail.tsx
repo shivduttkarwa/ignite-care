@@ -59,11 +59,17 @@ export default function ParticipantDetail() {
       {p && (
         <>
           <header className="c-person">
-            <span className="c-avatar c-person__avatar" aria-hidden="true">
+            <span
+              className="c-avatar c-person__avatar"
+              style={{ viewTransitionName: "person-avatar" }}
+              aria-hidden="true"
+            >
               {p.initials}
             </span>
             <div>
-              <h1 className="c-person__name">{p.full_name}</h1>
+              <h1 className="c-person__name" style={{ viewTransitionName: "person-name" }}>
+                {p.full_name}
+              </h1>
               <p className="c-person__meta">
                 {p.preferred_name && <>&ldquo;{p.preferred_name}&rdquo; &middot; </>}
                 {p.age && <>{p.age} &middot; </>}

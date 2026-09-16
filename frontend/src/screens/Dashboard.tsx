@@ -181,9 +181,10 @@ function WorkerView({ data }: { data: WorkerDashboard }) {
               />
             </div>
           ) : (
-            data.rows.map((row) => (
+            data.rows.map((row, index) => (
               <ParticipantRow
                 key={row.participant.id}
+                index={index}
                 participant={row.participant}
                 state={row.state}
                 isDone={row.is_done}
@@ -215,7 +216,7 @@ function HandoverPanel({ handover }: { handover: WorkerDashboard["handover"] }) 
       {handover.records.length ? (
         <div className="c-plist">
           {handover.records.map((record) => (
-            <Link key={record.id} className="c-plist__item" to={`/records/${record.id}`}>
+            <Link key={record.id} className="c-plist__item" to={`/records/${record.id}`} viewTransition>
               <span className="c-avatar c-avatar--sm" aria-hidden="true">
                 {record.participant_initials}
               </span>
@@ -309,7 +310,7 @@ function ManagerView({ data }: { data: ManagerDashboard }) {
             {data.outstanding.length ? (
               <div className="c-plist">
                 {data.outstanding.map((row) => (
-                  <Link key={row.participant.id} className="c-plist__item" to={`/participants/${row.participant.id}`}>
+                  <Link key={row.participant.id} className="c-plist__item" to={`/participants/${row.participant.id}`} viewTransition>
                     <span className="c-avatar c-avatar--sm" aria-hidden="true">
                       {row.participant.initials}
                     </span>
@@ -338,7 +339,7 @@ function ManagerView({ data }: { data: ManagerDashboard }) {
             </div>
             <div className="c-plist">
               {data.recent.map((record) => (
-                <Link key={record.id} className="c-plist__item" to={`/records/${record.id}`}>
+                <Link key={record.id} className="c-plist__item" to={`/records/${record.id}`} viewTransition>
                   <span className="c-avatar c-avatar--sm" aria-hidden="true">
                     {record.participant_initials}
                   </span>

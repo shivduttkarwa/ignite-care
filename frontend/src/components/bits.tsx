@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Link, useViewTransitionState } from "react-router-dom";
 
 import type { CareRecord, ConditionTag, Participant, RecordStatus } from "../api/types";
 import { clock, formBadgeClass } from "../lib/format";
@@ -63,6 +63,7 @@ type RowProps = {
   isDone: boolean;
   recordId?: number | null;
   showHome?: boolean;
+  index?: number;
   onNotRequired?: (participant: Participant) => void;
 };
 
@@ -72,8 +73,12 @@ export function ParticipantRow({
   isDone,
   recordId,
   showHome,
+  index = 0,
   onNotRequired,
 }: RowProps) {
+  const to = `/participants/${participant.id}`;
+  // Only the row being opened may claim the name, or the transition is ambiguous.
+  const opening = useViewTransitionState(to);
   const modifier = isDone
     ? " c-participant--done"
     : participant.shift_alert
@@ -86,15 +91,25 @@ export function ParticipantRow({
   }
 
   return (
-    <article className={`c-participant${modifier}`}>
+    <article
+      className={`c-participant${modifier}`}
+      style={{ "--row": index } as CSSProperties}
+    >
       <div className="c-participant__grid">
-        <span className="c-avatar c-participant__avatar" aria-hidden="true">
+        <span
+          className="c-avatar c-participant__avatar"
+          style={{ viewTransitionName: opening ? "person-avatar" : undefined }}
+          aria-hidden="true"
+        >
           {participant.initials}
         </span>
 
         <div className="c-participant__id">
-          <h3 className="c-participant__name">
-            <Link className="c-participant__link" to={`/participants/${participant.id}`}>
+          <h3
+            className="c-participant__name"
+            style={{ viewTransitionName: opening ? "person-name" : undefined }}
+          >
+            <Link className="c-participant__link" to={to} viewTransition>
               {participant.full_name}
             </Link>
           </h3>
@@ -124,7 +139,7 @@ export function ParticipantRow({
 
         <div className="c-participant__foot">
           {state === "not_required" ? (
-            <Link className="c-link-action" to={`/participants/${participant.id}`}>
+            <Link className="c-link-action" to={to} viewTransition>
               View reason
             </Link>
           ) : state === "submitted" && recordId ? (
@@ -308,7 +323,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 
 export function RecordCard({ record }: { record: CareRecord }) {
   return (
-    <Link className="c-record" to={`/records/${record.id}`}>
+    <Link className="c-record" to={`/records/${record.id}`} viewTransition>
       <div className="c-record__head">
         <span className="c-record__shift">{record.shift_label}</span>
         <span className="c-record__meta">

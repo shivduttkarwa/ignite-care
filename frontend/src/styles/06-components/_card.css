@@ -58,6 +58,20 @@
     transform var(--dur-fast) var(--ease-out);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .c-participant {
+    animation: row-in var(--dur) var(--ease-out) backwards;
+    animation-delay: calc(var(--row, 0) * 35ms);
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 /* Lift only. The border carries the done / flagged status, so hover leaves it. */
 .c-participant:hover {
   box-shadow: var(--shadow-md);

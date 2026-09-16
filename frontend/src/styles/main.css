@@ -19,6 +19,42 @@
 @import url("06-components/_menu.css") layer(components);
 @import url("07-utilities/_utils.css") layer(utilities);
 
-@view-transition {
-  navigation: auto;
+/* Page changes -------------------------------------------------------------
+   React Router starts these; the shared person-avatar / person-name pair is
+   set on the row being opened and on the detail header it becomes. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: vt-fade-out 110ms var(--ease-out) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-rise-in 240ms var(--ease-out) both;
+  }
+
+  ::view-transition-group(person-avatar),
+  ::view-transition-group(person-name) {
+    animation-duration: 280ms;
+    animation-timing-function: var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
