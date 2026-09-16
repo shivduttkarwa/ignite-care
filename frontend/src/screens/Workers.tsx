@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link, useViewTransitionState } from "react-router-dom";
 
 import { api } from "../api/client";
 import { AppFrame } from "../components/AppFrame";
@@ -13,6 +14,35 @@ type Worker = {
   is_manager: boolean;
   homes: { id: number; label: string }[];
 };
+
+function WorkerName({ person }: { person: Worker }) {
+  const to = `/care-workers/${person.id}`;
+  const opening = useViewTransitionState(to);
+  return (
+    <span
+      className="o-cluster"
+      style={
+        { "--cluster-gap": "var(--space-2)", flexWrap: "nowrap" } as React.CSSProperties
+      }
+    >
+      <span
+        className={`c-avatar c-avatar--sm${person.is_manager ? " c-avatar--accent" : ""}`}
+        style={{ viewTransitionName: opening ? "person-avatar" : undefined }}
+        aria-hidden="true"
+      >
+        {person.initials}
+      </span>
+      <Link
+        className="c-table__name c-participant__link"
+        to={to}
+        viewTransition
+        style={{ viewTransitionName: opening ? "person-name" : undefined }}
+      >
+        {person.full_name}
+      </Link>
+    </span>
+  );
+}
 
 export default function Workers() {
   const { data: me } = useMe();
@@ -38,7 +68,7 @@ export default function Workers() {
       {query.data && (
         <div className="c-tablewrap">
           <div className="o-scroll-x">
-            <table className="c-table" style={{ minWidth: "40rem" }}>
+            <table className="c-table c-table--wide">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -50,20 +80,7 @@ export default function Workers() {
                 {query.data.map((person) => (
                   <tr key={person.id}>
                     <td data-label="Name">
-                      <span
-                        className="o-cluster"
-                        style={
-                          { "--cluster-gap": "var(--space-2)", flexWrap: "nowrap" } as React.CSSProperties
-                        }
-                      >
-                        <span
-                          className={`c-avatar c-avatar--sm${person.is_manager ? " c-avatar--accent" : ""}`}
-                          aria-hidden="true"
-                        >
-                          {person.initials}
-                        </span>
-                        <span className="c-table__name">{person.full_name}</span>
-                      </span>
+                      <WorkerName person={person} />
                     </td>
                     <td data-label="Role">
                       {person.is_manager ? (

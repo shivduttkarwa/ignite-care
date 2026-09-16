@@ -17,6 +17,7 @@ urlpatterns = [
     path("homes/switch/", views.switch_home, name="switch-home"),
     path("shifts/", views.shifts, name="shifts"),
     path("workers/", views.workers, name="workers"),
+    path("workers/<int:pk>/", views.worker_detail, name="worker-detail"),
     path("properties/", views.properties, name="properties"),
     # Forms
     path("schemas/", views.schema_list, name="schema-list"),

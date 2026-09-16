@@ -1,5 +1,7 @@
 """The JSON API is the whole back end. Every rule the portal has is enforced here."""
 
+import datetime as dt
+
 import pytest
 from django.urls import reverse
 
@@ -276,3 +278,26 @@ def test_participant_list_carries_this_shift_state(worker_api, daniel):
     done = worker_api.get(reverse("api:participant-list")).json()[0]
     assert done["shift_state"] == RecordStatus.SUBMITTED
     assert done["shift_is_done"] is True
+
+
+def test_a_manager_can_open_a_care_worker(client, manager, worker, daniel):
+    """Managers need to see who has access and what they have lodged."""
+    from .test_pdf_and_exports import make_record
+
+    make_record(daniel, worker, dt.date(2026, 8, 12))
+    client.force_login(manager)
+
+    body = client.get(reverse("api:worker-detail", args=[worker.pk])).json()
+
+    assert body["full_name"] == worker.get_full_name()
+    assert body["role_label"] == "Support worker"
+    assert body["is_manager"] is False
+    assert [h["label"] for h in body["homes"]] == ["Acacia House"]
+    assert body["recent"][0]["participant_name"] == daniel.full_name
+    assert body["last_submitted_at"]
+
+
+def test_the_care_worker_screen_is_managers_only(client, worker, other_worker):
+    client.force_login(worker)
+    assert client.get(reverse("api:worker-detail", args=[other_worker.pk])).status_code == 403
+    assert client.get(reverse("api:workers")).status_code == 403

@@ -201,6 +201,22 @@ export type FormSchema = {
   sections: SchemaSection[];
 };
 
+export type WorkerDetail = {
+  id: number;
+  username: string;
+  full_name: string;
+  initials: string;
+  role: string;
+  role_label: string;
+  is_manager: boolean;
+  is_active: boolean;
+  phone: string;
+  homes: { id: number; label: string }[];
+  submitted_30d: number;
+  last_submitted_at: string | null;
+  recent: CareRecord[];
+};
+
 export type SchemaSummary = {
   key: string;
   version: string;

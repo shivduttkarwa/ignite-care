@@ -748,6 +748,49 @@ def workers(request):
     )
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def worker_detail(request, pk):
+    """Who a care worker is and what they have lodged. Read only: access is
+    changed in Django admin, so no manager can widen their own reach here."""
+    if not _is_manager(request.user):
+        return Response({"detail": "Managers only."}, status=status.HTTP_403_FORBIDDEN)
+
+    person = get_object_or_404(
+        User.objects.filter(staff_profile__isnull=False)
+        .select_related("staff_profile")
+        .prefetch_related("staff_profile__homes"),
+        pk=pk,
+    )
+    profile = person.staff_profile
+    since = timezone.localdate() - dt.timedelta(days=30)
+    submitted = CareRecord.objects.filter(
+        submitted_by=person, status=RecordStatus.SUBMITTED
+    ).select_related("participant", "home", "submitted_by__staff_profile", "created_by")
+
+    return Response(
+        {
+            "id": person.pk,
+            "username": person.username,
+            "full_name": person.get_full_name() or person.username,
+            "initials": profile.initials,
+            "role": profile.role,
+            "role_label": profile.get_role_display(),
+            "is_manager": profile.is_manager,
+            "is_active": person.is_active and profile.is_active,
+            "phone": profile.phone,
+            "homes": [{"id": h.pk, "label": h.label} for h in profile.homes.all()],
+            "submitted_30d": submitted.filter(service_date__gte=since).count(),
+            "last_submitted_at": submitted.order_by("-submitted_at")
+            .values_list("submitted_at", flat=True)
+            .first(),
+            "recent": CareRecordListSerializer(
+                submitted.order_by("-service_date", "-submitted_at")[:8], many=True
+            ).data,
+        }
+    )
+
+
 # Attached forms -------------------------------------------------------------
 
 

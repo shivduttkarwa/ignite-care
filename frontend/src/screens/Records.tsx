@@ -231,7 +231,7 @@ export default function Records() {
               <tbody>
                 {rows.map((record) => (
                   <tr key={record.id} aria-selected={selected.has(record.id)}>
-                    <td data-label="">
+                    <td data-label="" className="c-table__pick">
                       <input type="checkbox" className="c-check"
                              aria-label={`Select ${record.participant_name}, ${shortDate(record.service_date)}, ${record.shift_label}`}
                              checked={selected.has(record.id)} onChange={() => toggle(record.id)}

@@ -21,6 +21,7 @@ import Records from "./screens/Records";
 import Notices from "./screens/Notices";
 import Properties from "./screens/Properties";
 import Workers from "./screens/Workers";
+import WorkerDetail from "./screens/WorkerDetail";
 
 const RecordPreview = lazy(() => import("./screens/RecordPreview"));
 
@@ -90,6 +91,7 @@ const routes: RouteObject[] = [
               { path: "records", element: <Records /> },
               { path: "properties", element: <Properties /> },
               { path: "care-workers", element: <Workers /> },
+              { path: "care-workers/:id", element: <WorkerDetail /> },
             ],
           },
           { path: "*", element: <Navigate to="/" replace /> },
