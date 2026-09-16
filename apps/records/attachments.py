@@ -1,4 +1,7 @@
+import datetime as dt
 import re
+
+from django.utils import timezone
 
 from .models import AttachmentStatus
 from .schema import find_field, load_schema
@@ -22,6 +25,21 @@ def compact_duration(text):
     return " ".join(parts)
 
 
+def clock_text(value):
+    """6:02am in the service's timezone, not the locale's '6:02 a.m.'"""
+    if not value:
+        return ""
+    if isinstance(value, str):
+        try:
+            value = dt.time.fromisoformat(value)
+        except ValueError:
+            return value
+    if getattr(value, "tzinfo", None) is not None:
+        value = timezone.localtime(value)
+    hour = value.hour % 12 or 12
+    return f"{hour}:{value.minute:02d}{'am' if value.hour < 12 else 'pm'}"
+
+
 def schema_for(attachment):
     return load_schema(attachment.schema_key, attachment.schema_version)
 
@@ -31,6 +49,8 @@ def display_value(field, value):
         return ""
     if field.get("pdf_format") == "duration":
         return compact_duration(str(value))
+    if field.get("pdf_format") == "time":
+        return clock_text(value)
     return str(value)
 
 

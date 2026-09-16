@@ -34,16 +34,17 @@ def test_reason_is_only_required_when_both_washes_are_no():
     assert "no_wash_reason" not in validate(SCHEMA, showered)
 
 
-def test_hidden_fields_do_not_count_towards_a_section():
+def test_personal_care_asks_every_question_the_paper_form_prints():
     personal_care = SCHEMA["sections"][0]
+    assert [field["key"] for field in personal_care["fields"]] == [
+        "shower",
+        "bed_bath",
+        "no_wash_reason",
+        "physio",
+    ]
 
     showered = {"shower": True, "bed_bath": False, "physio": True}
-    assert answered_count(personal_care, showered) == (3, 3)
-
-    both_no = {"shower": False, "bed_bath": False, "physio": True}
-    filled, total = answered_count(personal_care, both_no)
-    assert total == 4, "the reason question appears once both washes are No"
-    assert filled == 3
+    assert answered_count(personal_care, showered) == (3, 4)
 
 
 def test_promoted_values_track_the_answers():

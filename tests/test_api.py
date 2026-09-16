@@ -168,19 +168,6 @@ def test_a_locked_record_cannot_be_written_to(worker_api, daniel):
         assert response.status_code == 409, name
 
 
-def test_hidden_answers_are_not_stored(worker_api, daniel):
-    record_id = worker_api.post(
-        reverse("api:record-start"), {"participant": daniel.pk}, content_type="application/json"
-    ).json()["id"]
-
-    worker_api.patch(
-        reverse("api:record-draft", args=[record_id]),
-        {"answers": dict(ANSWERS, no_wash_reason="Typed by mistake")},
-        content_type="application/json",
-    )
-    assert CareRecord.objects.get().answers["no_wash_reason"] is None
-
-
 def test_not_required_needs_a_reason(worker_api, daniel):
     blank = worker_api.post(
         reverse("api:record-not-required"),

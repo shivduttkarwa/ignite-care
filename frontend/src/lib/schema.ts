@@ -1,4 +1,4 @@
-import type { SchemaField, SchemaSection } from "../api/types";
+import type { SchemaField, SchemaSection, ShowIf } from "../api/types";
 
 export type Answers = Record<string, unknown>;
 
@@ -8,14 +8,25 @@ export function normalise(value: unknown): unknown {
   return value;
 }
 
-export function isVisible(field: SchemaField, answers: Answers): boolean {
-  if (!field.show_if?.all) return true;
-  return field.show_if.all.every((clause) => {
+function matches(rule: ShowIf | undefined, answers: Answers): boolean {
+  if (!rule?.all) return true;
+  return rule.all.every((clause) => {
     const value = answers[clause.field];
     if ("eq" in clause) return normalise(value) === normalise(clause.eq);
     if ("filled" in clause) return Boolean(value) === clause.filled;
     return true;
   });
+}
+
+export function isVisible(field: SchemaField, answers: Answers): boolean {
+  return field.show_if ? matches(field.show_if, answers) : true;
+}
+
+/** A required_if field stays on the form the way it is printed on paper, and
+    only picks up the asterisk once the rule is met. */
+export function withRequired(field: SchemaField, answers: Answers): SchemaField {
+  if (field.required || !field.required_if) return field;
+  return matches(field.required_if, answers) ? { ...field, required: true } : field;
 }
 
 export function isBlank(value: unknown): boolean {

@@ -1,6 +1,6 @@
 @page {
   size: A4;
-  margin: 16mm 15mm 20mm;
+  margin: 14mm 18mm 21mm;
 
   @bottom-center {
     content: element(footer);
@@ -9,10 +9,14 @@
   }
 }
 
+@page chart {
+  margin: 12mm 10mm 24mm;
+}
+
 body {
   font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
-  font-size: 10.5pt;
-  line-height: 1.35;
+  font-size: 11pt;
+  line-height: 1.3;
   color: #000;
   margin: 0;
 }
@@ -20,67 +24,58 @@ body {
 h1 { bookmark-level: 1; }
 h2, h3, h4 { bookmark-level: none; }
 
+/* Document footer, taken from the paper form ------------------------------- */
 .footer {
   position: running(footer);
-  display: flex;
-  align-items: center;
-  gap: 5pt;
-  padding-top: 5pt;
-  border-top: .6pt solid #b5b5b5;
-  font-size: 7.5pt;
-  color: #444;
+  padding-top: 4pt;
+  font-size: 9pt;
 }
 
-.footer__mark { height: 10pt; }
-.footer__page { margin-left: auto; }
-.footer__page::after { content: "Page " counter(page) " of " counter(pages); }
+.footer__ref { float: right; font-size: 7.5pt; color: #555; }
+.footer__ref::after { content: " · page " counter(page) " of " counter(pages); }
+.footer__notice { display: block; margin-top: 1pt; font-size: 7pt; font-style: italic; line-height: 1.25; }
 
-.brand { display: flex; align-items: center; gap: 7pt; margin-bottom: 10pt; }
-.brand__mark { height: 26pt; }
-.brand__name { font-size: 12pt; font-weight: bold; line-height: 1.1; }
-.brand__sub { font-size: 7.5pt; color: #444; }
+/* Daily Care Needs Record --------------------------------------------------- */
+.sheet__logo { display: block; height: 42pt; margin: 0 auto 2pt; }
 
-h1 {
-  font-size: 13pt;
+h1.form-title {
   margin: 0 0 8pt;
-  padding-bottom: 3pt;
-  border-bottom: 1.2pt solid #115e74;
+  font-size: 15pt;
+  text-align: center;
   text-decoration: underline;
 }
 
-h2 { font-size: 10.5pt; margin: 11pt 0 4pt; }
+.lead { margin: 8pt 0 4pt; font-weight: bold; }
+.mark { background: #ff0; padding: 0 2pt; }
 
-table { width: 100%; border-collapse: collapse; margin-bottom: 6pt; }
-th, td { border: .6pt solid #000; padding: 3.5pt 5pt; text-align: left; vertical-align: top; }
-th { width: 34%; font-weight: bold; }
-td.label { width: 22%; font-weight: bold; }
+.line { margin: 0 0 5pt; }
+.pair { display: flex; margin: 0 0 5pt; }
+.pair > span:first-child { width: 48%; }
 
-.lines p { margin: 0 0 2.5pt; }
+.ink { font-weight: bold; }
+.not-recorded { color: #777; font-style: italic; font-weight: normal; }
+
+.stack { width: 100%; border-collapse: collapse; margin: 0 0 4pt; }
+.stack td { border: .75pt solid #000; padding: 3.5pt 5pt; vertical-align: top; }
+.stack p { margin: 0 0 1pt; }
+.stack p:last-child { margin-bottom: 0; }
+.stack__tall td { height: 34pt; }
 
 .box {
   display: inline-block;
-  min-width: 22pt;
-  padding: 0 4pt;
-  border: .8pt solid #000;
+  min-width: 20pt;
+  padding: 0 3pt;
+  border: .9pt solid #000;
   font-weight: bold;
   text-align: center;
 }
 
-.off { color: #888; }
-.not-recorded { color: #777; font-style: italic; }
+.off { color: #999; }
 
-.overnight { border: .6pt solid #000; padding: 5pt; margin-bottom: 6pt; }
-.overnight p { margin: 0 0 2pt; }
+.attend { margin: 3pt 0 0; padding: 0; }
+.attend li { list-style: none; margin: 0 0 1pt; font-weight: bold; }
 
-.attendances { border: .6pt solid #000; padding: 5pt; margin-bottom: 6pt; }
-.attendances__title { margin: 0 0 4pt; font-weight: bold; }
-.attendances table { margin: 0; }
-.attendances th { width: auto; }
-.attendances .col-time { width: 18%; }
-.attendances .col-duration { width: 20%; }
-.attendances p.not-recorded { margin: 0; }
-
-.footnote { margin-top: 10pt; font-weight: bold; font-size: 10pt; }
+.footnote { margin: 8pt 0 0; font-weight: bold; font-size: 12pt; color: #f00; }
 
 .amendment {
   margin-top: 10pt;
@@ -91,19 +86,62 @@ td.label { width: 22%; font-weight: bold; }
 
 .amendment h3 { margin: 0 0 3pt; font-size: 9.5pt; color: #b12655; }
 
-.chart { page-break-before: always; }
+/* Seizure Observation Chart and any other attached chart -------------------- */
+.chart {
+  page: chart;
+  break-before: page;
+}
 
-.chart .brand { margin-bottom: 6pt; }
-.chart h1 { margin-bottom: 6pt; }
+.chart__head { display: flex; align-items: flex-start; margin-bottom: 4pt; }
+.chart__logo { height: 46pt; flex: none; margin-left: auto; }
 
-.grid { table-layout: fixed; font-size: 8.5pt; line-height: 1.2; border: 1pt solid #000; }
-.grid tr { page-break-inside: avoid; }
-.grid th, .grid td { padding: 1.9pt 5pt; }
-.grid th { width: auto; font-weight: normal; }
-.grid .grid__labelcol { width: 40%; }
+.chart__title {
+  margin: 6pt 0 0;
+  font-size: 18pt;
+  font-weight: normal;
+  letter-spacing: -.2pt;
+  white-space: nowrap;
+}
+
+.chart__meta { display: flex; align-items: baseline; gap: 14pt; margin: 0 0 6pt; font-size: 9pt; }
+.chart__name { margin: 0; font-weight: bold; white-space: nowrap; }
+.chart__rule { display: inline-block; min-width: 150pt; border-bottom: .8pt solid #000; }
+.chart__how { margin: 0; line-height: 1.25; }
+
+.grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+  line-height: 1.15;
+}
+
+.grid tr { break-inside: avoid; }
+.grid th, .grid td { border: .6pt solid #000; padding: 1.6pt 4pt; text-align: left; vertical-align: top; }
+.grid th { font-weight: normal; }
+.grid thead th { font-weight: bold; }
 .grid td { text-align: center; }
-.grid__key th, .grid__heading th { background: #e8e6e1; font-weight: bold; }
-.grid .is-strong { font-weight: bold; }
-.grid .is-muted { color: #777; font-style: italic; font-weight: normal; }
-.grid .is-signature { font-style: italic; }
+.grid__labelcol { width: 31.6%; }
+
+.grid__symptoms { font-weight: bold; vertical-align: top; }
+.grid__start { display: block; color: #f00; }
+.grid__datehead { font-weight: bold; text-align: center; }
+.grid__date { font-weight: bold; }
+
+.grid__heading th, .grid__heading td { background: #f4b083; font-weight: bold; text-align: center; }
+.grid__heading th:first-child { text-align: left; }
+
+.grid__heading--alert th, .grid__heading--alert td { background: #f00; }
+
+.grid__bar td { background: #c45911; height: 7pt; padding: 0; }
+
+.grid__signoff th { font-weight: bold; }
+.grid__signoff th span { display: block; }
+.grid__signoff td { height: 22pt; }
+.grid__who { display: block; }
+.grid__sign { display: block; font-style: italic; }
 .grid td img { max-height: 16pt; max-width: 100%; }
+
+.grid__detail { display: block; font-size: 7pt; font-weight: normal; }
+.grid .is-strong { font-weight: bold; }
+.grid .is-muted { color: #777; font-style: italic; }

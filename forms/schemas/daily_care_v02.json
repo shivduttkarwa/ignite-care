@@ -4,6 +4,8 @@
   "title": "Daily Care Needs Record",
   "short_title": "Daily Care Needs",
   "badge": "DCN",
+  "document_ref": "Daily Care Needs Record 20240528 V02",
+  "notice": "This document and all modified versions remain the intellectual property of Ignite Community Services. Unauthorised use, reproduction, modification, or distribution is prohibited. The most recent approved version supersedes all prior versions.",
   "footer_note": "Please add anything that needs to be followed up to the handover notes/diary or Caremaster to ensure it is completed.",
   "sections": [
     {
@@ -28,15 +30,15 @@
         {
           "key": "no_wash_reason",
           "type": "textarea",
-          "label": "If neither, why?",
+          "label": "If neither, Why?",
           "placeholder": "Why was neither a shower nor a bed bath given?",
-          "show_if": {
+          "required_if": {
             "all": [
               { "field": "shower", "eq": false },
               { "field": "bed_bath", "eq": false }
             ]
           },
-          "required_when_shown": true
+          "error": "Say why neither a shower nor a bed bath was given"
         },
         {
           "key": "physio",
@@ -125,14 +127,27 @@
         {
           "key": "attendances",
           "type": "repeater",
-          "label": "From 10pm to 6am, when did you need to attend to {participant}?",
-          "help": "Times, purpose and for how long.",
+          "label": "From 10pm – 6am when did you need to attend to {participant} -Times, purpose and for how long?",
           "add_label": "Add attendance",
           "columns": [
             { "key": "time", "type": "time", "label": "Time", "placeholder": "11:40pm" },
             { "key": "purpose", "type": "text", "label": "Purpose", "placeholder": "Toilet assist" },
             { "key": "duration_minutes", "type": "number", "label": "Duration", "suffix": "min", "min": 1, "max": 480 }
           ]
+        }
+      ]
+    },
+    {
+      "key": "follow_up",
+      "title": "Follow-up",
+      "pdf_layout": "table",
+      "fields": [
+        {
+          "key": "follow_up",
+          "type": "textarea",
+          "label": "Anything that needs to be followed up?",
+          "placeholder": "What needs following up, and who needs to action it",
+          "help": "Leave blank if nothing needs following up."
         }
       ]
     }

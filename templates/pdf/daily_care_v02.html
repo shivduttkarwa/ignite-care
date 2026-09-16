@@ -11,76 +11,72 @@
 <body>
 
 <div class="footer">
-  <img class="footer__mark" src="frontend/public/logo-mark.webp" alt="">
-  <span>{{ organisation_name }} · {{ record.reference }} · Submitted by {{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }} · {{ record.submitted_at|date:"j M Y" }} {{ record.submitted_at|clock }}</span>
-  <span class="footer__page"></span>
+  <span class="footer__ref">{{ record.reference }}</span>
+  {{ schema.document_ref }}
+  <span class="footer__notice">{{ schema.notice }}</span>
 </div>
 
-{% include "pdf/_brand.html" %}
+<img class="sheet__logo" src="frontend/public/logo-full.webp" alt="Ignite Community Services">
 
 <h1 class="form-title">{{ schema.title }}</h1>
 
-<table>
-  <tr><th>Participant</th><td>{{ participant.full_name }}</td></tr>
-  <tr><th>Date</th><td>{{ record.service_date|date:"l j F Y" }}</td></tr>
-  <tr><th>Name of staff on shift</th><td>{{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }} ({{ record.get_shift_display }})</td></tr>
+<table class="stack">
+  <tr><td><strong>Participant:</strong> <span class="ink">{{ participant.full_name }}</span></td></tr>
+  <tr><td><strong>Date:</strong> <span class="ink">{{ record.service_date|date:"l j F Y" }}</span></td></tr>
+  <tr><td><strong>Name of staff on shift:</strong> <span class="ink">{{ record.submitted_by.get_full_name|default:record.created_by.get_full_name }}</span></td></tr>
+  <tr><td>{{ record.get_shift_display }}{% if record.submitted_at %} · submitted {{ record.submitted_at|date:"j M Y" }} {{ record.submitted_at|clock }}{% endif %}</td></tr>
 </table>
 
-<h2>Personal Care</h2>
-<div class="lines">
-  <p>Shower? {% yesno_boxes record "shower" %}</p>
-  <p>Bed Bath? {% yesno_boxes record "bed_bath" %}</p>
-  <p>If neither, why? {% answer record "no_wash_reason" %}</p>
-  <p>Physio completed and documented in physio diary? {% yesno_boxes record "physio" %}</p>
-</div>
+<p class="lead">Personal Care:</p>
+<p class="pair">
+  <span>Shower? {% yesno_boxes record "shower" %}</span>
+  <span>Bed Bath? {% yesno_boxes record "bed_bath" %}</span>
+</p>
+<p class="line">If neither, Why? <span class="ink">{% answer record "no_wash_reason" %}</span></p>
+<p class="lead"><span class="mark">Physio completed and documented in physio diary? {% yesno_boxes record "physio" %}</span></p>
 
-<h2>Food and Fluid</h2>
-<table>
-  <tr><td class="label">Breakfast</td><td>{% answer record "breakfast" %}</td></tr>
-  <tr><td class="label">Lunch</td><td>{% answer record "lunch" %}</td></tr>
-  <tr><td class="label">Dinner</td><td>{% answer record "dinner" %}</td></tr>
-  <tr><td class="label">Snacks</td><td>{% answer record "snacks" %}</td></tr>
-  <tr><td class="label">Fluids</td><td>{% answer record "fluids" %}</td></tr>
-  <tr><td class="label">Anything else</td><td>{% answer record "other_food" %}</td></tr>
+<p class="lead"><span class="mark">Food and Fluid:</span></p>
+<table class="stack">
+  <tr><td>Breakfast <span class="ink">{% answer record "breakfast" %}</span></td></tr>
+  <tr><td>Lunch <span class="ink">{% answer record "lunch" %}</span></td></tr>
+  <tr><td>Dinner <span class="ink">{% answer record "dinner" %}</span></td></tr>
+  <tr><td>Snacks <span class="ink">{% answer record "snacks" %}</span></td></tr>
+  <tr><td>Fluids: <span class="ink">{% answer record "fluids" %}</span></td></tr>
+  <tr><td>Anything else: <span class="ink">{% answer record "other_food" %}</span></td></tr>
 </table>
 
-<h2>Bowel (note texture) and Urine</h2>
-<table>
-  <tr><td class="label">Bowel</td><td>{% answer record "bowel" %}</td></tr>
-  <tr><td class="label">Urine</td><td>{% answer record "urine" %}</td></tr>
+<p class="lead"><span class="mark">Bowel (note texture) and Urine:</span></p>
+<table class="stack">
+  <tr><td>Bowel: <span class="ink">{% answer record "bowel" %}</span></td></tr>
+  <tr><td>Urine: <span class="ink">{% answer record "urine" %}</span></td></tr>
 </table>
 
-<h2>Overnight</h2>
-<div class="overnight">
-  <p><strong>Slept:</strong>
-    {% if record.answers.sleep_from or record.answers.sleep_to %}
-      {{ record.answers.sleep_from|clock|default:"—" }} to {{ record.answers.sleep_to|clock|default:"—" }}
-    {% else %}<span class="not-recorded">Not recorded</span>{% endif %}
-  </p>
-  <p><strong>Awake:</strong> {% answer record "awake_notes" %}</p>
-</div>
-
-<div class="attendances">
-  <p class="attendances__title">Attendances, 10pm to 6am</p>
-  {% if attendances %}
-    <table>
-      <thead>
-        <tr><th class="col-time">Time</th><th>Purpose</th><th class="col-duration">Duration</th></tr>
-      </thead>
-      <tbody>
+<p class="lead">Overnight:</p>
+<table class="stack">
+  <tr class="stack__tall"><td>
+    <p>What times did he/she sleep?
+      <span class="ink">{% if record.answers.sleep_from or record.answers.sleep_to %}{{ record.answers.sleep_from|clock|default:"—" }} to {{ record.answers.sleep_to|clock|default:"—" }}{% else %}<span class="not-recorded">Not recorded</span>{% endif %}</span>
+    </p>
+    <p>Was he/she awake ie watching TV? <span class="ink">{% answer record "awake_notes" %}</span></p>
+  </td></tr>
+  <tr class="stack__tall"><td>
+    <p>From 10pm – 6am when did you need to attend to {{ participant.first_name }} -Times, purpose and for how long?</p>
+    {% if attendances %}
+      <ul class="attend">
         {% for row in attendances %}
-          <tr>
-            <td>{{ row.time|clock }}</td>
-            <td>{{ row.purpose }}</td>
-            <td>{{ row.duration_minutes }} min</td>
-          </tr>
+          <li>{{ row.time|clock }} – {{ row.purpose }} – {{ row.duration_minutes }} min</li>
         {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p class="not-recorded">None recorded.</p>
-  {% endif %}
-</div>
+      </ul>
+    {% else %}
+      <p class="not-recorded">None recorded.</p>
+    {% endif %}
+  </td></tr>
+</table>
+
+<p class="lead">Follow-up:</p>
+<table class="stack">
+  <tr><td>Anything that needs to be followed up? <span class="ink">{% answer record "follow_up" %}</span></td></tr>
+</table>
 
 <p class="footnote">{{ schema.footer_note }}</p>
 

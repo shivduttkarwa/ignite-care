@@ -5,6 +5,8 @@
   "short_title": "Seizure Chart",
   "badge": "SEIZURE",
   "pdf_label": "Seizure Observation",
+  "document_ref": "Seizure Observation Chart 20220505 V02",
+  "notice": "This document and all modified versions remain the intellectual property of Ignite Community Services. Unauthorised use, reproduction, modification, or distribution is prohibited. The most recent approved version supersedes all prior versions.",
   "attachable": true,
   "collapsible": false,
   "item_label": "Seizure",
@@ -12,21 +14,22 @@
   "describe": ["start_time", "seizure_length"],
   "headline": "seizure_length",
   "instruction": "Start recording time at the beginning of the seizure",
-  "pdf_columns": 3,
+  "pdf_columns": 7,
   "sections": [
     {
       "key": "timing",
-      "title": "Timing",
+      "title": "Start of seizure",
       "pdf_heading": false,
       "fields": [
         {
           "key": "start_time",
           "type": "timer",
           "label": "Seizure start time",
-          "pdf_label": "TIME",
           "writes": "seizure_length",
           "required": true,
-          "error": "Record the time the seizure started"
+          "error": "Record the time the seizure started",
+          "pdf_format": "time",
+          "pdf_skip": true
         }
       ]
     },
@@ -123,9 +126,14 @@
     },
     {
       "key": "falls",
-      "title": "Falls",
+      "title": "FALLS",
       "fields": [
-        { "key": "falls", "type": "yesno", "label": "Falls?" },
+        {
+          "key": "falls",
+          "type": "yesno",
+          "label": "Falls?",
+          "pdf_label": "Yes / No - IF YES Incident report and bruise chart must be completed."
+        },
         {
           "key": "falls_notice",
           "type": "notice",
@@ -137,7 +145,8 @@
     },
     {
       "key": "after_seizure",
-      "title": "After Seizure",
+      "title": "AFTER SEIZURE",
+      "pdf_bar_before": true,
       "fields": [
         {
           "key": "after_seizure",
@@ -159,6 +168,9 @@
     {
       "key": "duration",
       "title": "Duration of seizure",
+      "pdf_heading_tone": "alert",
+      "pdf_heading_values": "start_time",
+      "pdf_heading_blank": "TIME",
       "fields": [
         {
           "key": "seizure_length",
@@ -186,8 +198,9 @@
         {
           "key": "incontinence",
           "type": "checks",
-          "label": "Incontinence",
+          "label": "Bowel / Urine",
           "hide_label": true,
+          "pdf_combine": true,
           "options": [
             { "key": "bowel", "label": "Bowel" },
             { "key": "urine", "label": "Urine" }
@@ -197,9 +210,15 @@
     },
     {
       "key": "injury",
-      "title": "Injury Type",
+      "title": "INJURY TYPE",
       "fields": [
-        { "key": "person_injured", "type": "yesno", "label": "Person injured?" },
+        {
+          "key": "person_injured",
+          "type": "yesno",
+          "label": "Person injured?",
+          "pdf_label": "Person injured – YES / NO",
+          "pdf_detail": "injury_details"
+        },
         {
           "key": "injury_details",
           "type": "textarea",
@@ -208,16 +227,24 @@
           "show_if": { "all": [{ "field": "person_injured", "eq": true }] },
           "required_when_shown": true,
           "error": "Describe the injury",
-          "pdf_strong": true
+          "pdf_skip": true
         },
         { "key": "qas_called", "type": "yesno", "label": "QAS Called?" },
-        { "key": "incident_report", "type": "yesno", "label": "Incident Report completed?" }
+        {
+          "key": "incident_report",
+          "type": "yesno",
+          "label": "Incident Report completed?",
+          "pdf_shaded": true
+        }
       ]
     },
     {
       "key": "sign_off",
       "title": "Sign-off",
-      "pdf_heading": false,
+      "pdf_row": "signoff",
+      "pdf_labels": ["NAME OF OBSERVER:", "Signed:"],
+      "pdf_name": "observer_name",
+      "pdf_signature": "signature",
       "fields": [
         {
           "key": "observer_name",
@@ -225,8 +252,7 @@
           "label": "Name of observer",
           "prefill": "full_name",
           "required": true,
-          "error": "Add the observer's name",
-          "pdf_label_strong": true
+          "error": "Add the observer's name"
         },
         {
           "key": "signature",
@@ -234,8 +260,7 @@
           "label": "Signed",
           "timestamp_label": "Timestamp",
           "required": true,
-          "error": "Sign the chart, or type your name instead",
-          "pdf_label_strong": true
+          "error": "Sign the chart, or type your name instead"
         }
       ]
     }

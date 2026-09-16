@@ -1,11 +1,10 @@
 """Template tags used by the printed record templates."""
 
-import datetime as dt
-
 from django import template
-from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+
+from apps.records.attachments import clock_text
 
 register = template.Library()
 
@@ -38,16 +37,4 @@ def yesno_boxes(record, key):
 
 @register.filter
 def clock(value):
-    """6:02am in the service's timezone, not the locale's '6:02 a.m.'"""
-    if not value:
-        return ""
-    if isinstance(value, str):
-        try:
-            value = dt.time.fromisoformat(value)
-        except ValueError:
-            return value
-    if hasattr(value, "tzinfo") and value.tzinfo is not None:
-        value = timezone.localtime(value)
-    hour = value.hour % 12 or 12
-    suffix = "am" if value.hour < 12 else "pm"
-    return f"{hour}:{value.minute:02d}{suffix}"
+    return clock_text(value)

@@ -13,7 +13,7 @@ import { FormSection } from "../components/form/FormSection";
 import { SaveStatus } from "../components/form/SaveStatus";
 import { useMe } from "../lib/auth";
 import { restoreDraft, useAutosave, wasSaved } from "../lib/autosave";
-import { type Answers, isVisible } from "../lib/schema";
+import { type Answers, isVisible, withRequired } from "../lib/schema";
 
 export default function AttachmentForm() {
   const { recordId, id } = useParams();
@@ -202,7 +202,7 @@ function ChartEditor({
               isVisible(field, answers) ? (
                 <SchemaFieldControl
                   key={field.key}
-                  field={field}
+                  field={withRequired(field, answers)}
                   value={answers[field.key]}
                   error={errors[field.key]}
                   onChange={(value) => set(field.key, value)}

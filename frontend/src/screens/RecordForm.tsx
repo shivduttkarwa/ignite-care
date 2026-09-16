@@ -22,7 +22,7 @@ import { FormSection } from "../components/form/FormSection";
 import { SaveStatus } from "../components/form/SaveStatus";
 import { useMe } from "../lib/auth";
 import { restoreDraft, useAutosave, wasSaved } from "../lib/autosave";
-import { type Answers, isVisible, sectionCounts } from "../lib/schema";
+import { type Answers, isVisible, sectionCounts, withRequired } from "../lib/schema";
 
 const COMING_LATER = ["Bowel Chart", "Food Chart", "Bruise Chart"];
 
@@ -213,7 +213,7 @@ function Editor({
     return (
       <SchemaFieldControl
         key={field.key}
-        field={field}
+        field={withRequired(field, answers)}
         value={answers[field.key]}
         error={errors[field.key]}
         onChange={(value) => set(field.key, value)}

@@ -15,6 +15,7 @@ from apps.records.models import (
     Shift,
 )
 from apps.records.schema import (
+    answered_count,
     clean_answers,
     coerce,
     find_field,
@@ -120,6 +121,16 @@ def test_injury_details_only_matter_when_someone_was_injured():
     assert validate(SEIZURE, injured)["injury_details"] == "Describe the injury"
 
 
+def test_hidden_fields_do_not_count_towards_a_section():
+    injury = next(s for s in SEIZURE["sections"] if s["key"] == "injury")
+
+    uninjured = {"person_injured": False, "qas_called": False, "incident_report": False}
+    assert answered_count(injury, uninjured) == (3, 3)
+
+    injured = {"person_injured": True, "qas_called": False, "incident_report": False}
+    assert answered_count(injury, injured) == (3, 4)
+
+
 def test_a_signature_is_a_typed_name_or_a_drawn_png():
     field = find_field(SEIZURE, "signature")
     assert coerce(field, {"mode": "typed", "name": " K. Mitchell "})["name"] == "K. Mitchell"
@@ -202,11 +213,23 @@ def test_submitting_a_seizure_chart_validates_and_is_audited(worker_api, daniel)
     assert accepted.status_code == 200
     body = accepted.json()
     assert body["status"] == "submitted"
-    assert body["description"] == "14:20 · 2m 10s"
+    assert body["description"] == "2:20pm · 2m 10s"
     assert body["answers"]["awareness"] == ["confused"]
     assert AuditEvent.objects.filter(
         action=AuditEvent.Action.SUBMIT, target__endswith="Seizure 1"
     ).exists()
+
+
+def test_hidden_answers_are_not_stored(worker_api, daniel):
+    record_id = _start(worker_api, daniel)
+    attachment_id = _add_seizure(worker_api, record_id).json()["id"]
+
+    worker_api.patch(
+        reverse("api:attachment-draft", args=[attachment_id]),
+        {"answers": dict(SEIZURE_ANSWERS, injury_details="Typed by mistake")},
+        content_type="application/json",
+    )
+    assert AttachedForm.objects.get(pk=attachment_id).answers["injury_details"] is None
 
 
 def test_changing_a_submitted_chart_returns_it_to_draft(worker_api, daniel):

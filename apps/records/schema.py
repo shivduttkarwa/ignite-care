@@ -21,11 +21,19 @@ class SchemaNotFound(Exception):
 
 
 @functools.lru_cache(maxsize=32)
-def load_schema(key: str, version: str) -> dict:
+def _read_schema(key: str, version: str) -> dict:
     path = settings.SCHEMA_DIR / f"{key}_{version}.json"
     if not path.exists():
         raise SchemaNotFound(f"No schema at {path}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_schema(key: str, version: str) -> dict:
+    # runserver only watches Python files, so a schema edit would otherwise need
+    # a restart to show up.
+    if settings.DEBUG:
+        _read_schema.cache_clear()
+    return _read_schema(key, version)
 
 
 def available_schemas() -> list[dict]:
@@ -104,19 +112,20 @@ def _coerce_signature(raw):
     return None
 
 
-def is_visible(field: dict, answers: dict) -> bool:
-    """Evaluate a show_if rule against the answers collected so far."""
-    rule = field.get("show_if")
-    if not rule:
-        return True
-    clauses = rule.get("all") or []
-    for clause in clauses:
+def matches(rule: dict | None, answers: dict) -> bool:
+    for clause in (rule or {}).get("all") or []:
         value = answers.get(clause["field"])
         if "eq" in clause and value != clause["eq"]:
             return False
         if "filled" in clause and bool(value) != clause["filled"]:
             return False
     return True
+
+
+def is_visible(field: dict, answers: dict) -> bool:
+    """Evaluate a show_if rule against the answers collected so far."""
+    rule = field.get("show_if")
+    return matches(rule, answers) if rule else True
 
 
 def clean_answers(schema: dict, raw: dict) -> dict:
@@ -155,7 +164,11 @@ def validate(schema: dict, answers: dict) -> dict[str, str]:
         if field["type"] in STRUCTURAL_TYPES:
             continue
         visible = is_visible(field, answers)
-        required = field.get("required") or (field.get("required_when_shown") and visible)
+        required = (
+            field.get("required")
+            or (field.get("required_when_shown") and visible)
+            or (field.get("required_if") and matches(field["required_if"], answers))
+        )
         if required and visible and is_blank(answers.get(field["key"])):
             errors[field["key"]] = field.get("error") or f"{field['label']} is required."
     return errors

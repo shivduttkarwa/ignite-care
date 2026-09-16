@@ -1,57 +1,126 @@
-import type { CareRecordDetail, FormSchema, SchemaField } from "../api/types";
+import type { CareRecordDetail, FormSchema, SchemaField, SchemaSection } from "../api/types";
 import { YesNoBoxes } from "./bits";
 import { longDate, timeText } from "../lib/format";
 
-function shown(value: unknown) {
+type Answers = Record<string, unknown>;
+
+function firstName(fullName: string) {
+  return fullName.split(" ")[0];
+}
+
+function Ink({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === "") {
     return <span className="c-paper__off">Not recorded</span>;
   }
-  return String(value);
+  return <span className="c-paper__ink">{String(value)}</span>;
 }
 
-function SectionAnswers({ fields, answers }: { fields: SchemaField[]; answers: Record<string, unknown> }) {
-  const lines = fields.filter((field) => field.type === "yesno");
-  const rows = fields.filter((field) => !["yesno", "repeater", "notice"].includes(field.type));
-  const grouped = new Set<string>();
+function FieldLine({
+  field,
+  fields,
+  record,
+}: {
+  field: SchemaField;
+  fields: SchemaField[];
+  record: CareRecordDetail;
+}) {
+  const answers: Answers = record.answers;
 
+  if (field.type === "yesno") {
+    return (
+      <p className="c-paper__line">
+        {field.label} <YesNoBoxes value={answers[field.key]} />
+      </p>
+    );
+  }
+
+  if (field.group) {
+    const values = fields
+      .filter((member) => member.group === field.group)
+      .map((member) => answers[member.key])
+      .filter(Boolean)
+      .map((value) => timeText(String(value)));
+    return (
+      <p className="c-paper__line">
+        {field.label} <Ink value={values.join(" to ")} />
+      </p>
+    );
+  }
+
+  const value = answers[field.key];
+  return (
+    <p className="c-paper__line">
+      {field.label.replace("{participant}", firstName(record.participant_name))}{" "}
+      <Ink value={field.type === "time" && value ? timeText(String(value)) : value} />
+    </p>
+  );
+}
+
+function Attendances({ field, record }: { field: SchemaField; record: CareRecordDetail }) {
   return (
     <>
-      {lines.map((field) => (
-        <p key={field.key} className="c-paper__line">
-          {field.label} <YesNoBoxes value={answers[field.key]} />
-        </p>
-      ))}
-      {rows.length > 0 && (
-        <table>
-          <tbody>
-            {rows.map((field) => {
-              if (field.group) {
-                if (grouped.has(field.group)) return null;
-                grouped.add(field.group);
-                const values = rows
-                  .filter((member) => member.group === field.group)
-                  .map((member) => answers[member.key])
-                  .filter(Boolean)
-                  .map((item) => timeText(String(item)));
-                return (
-                  <tr key={field.group}>
-                    <th>{field.group_label ?? field.label}</th>
-                    <td>{values.length ? values.join(" to ") : shown(null)}</td>
-                  </tr>
-                );
-              }
-              const value = answers[field.key];
-              return (
-                <tr key={field.key}>
-                  <th>{field.label}</th>
-                  <td>{shown(field.type === "time" && value ? timeText(String(value)) : value)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <p>{field.label.replace("{participant}", firstName(record.participant_name))}</p>
+      {record.attendances.length > 0 ? (
+        <ul className="c-paper__list">
+          {record.attendances.map((row, index) => (
+            <li key={index}>
+              {timeText(row.time)} – {row.purpose} – {row.duration_minutes} min
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="c-paper__off">None recorded.</p>
       )}
     </>
+  );
+}
+
+function Section({ section, record }: { section: SchemaSection; record: CareRecordDetail }) {
+  const fields = section.fields.filter((field) => field.type !== "notice");
+  const seen = new Set<string>();
+  const simple: SchemaField[] = [];
+  const repeaters: SchemaField[] = [];
+
+  for (const field of fields) {
+    if (field.type === "repeater") {
+      repeaters.push(field);
+      continue;
+    }
+    if (field.group) {
+      if (seen.has(field.group)) continue;
+      seen.add(field.group);
+    }
+    simple.push(field);
+  }
+
+  const lines = simple.map((field) => (
+    <FieldLine key={field.key} field={field} fields={fields} record={record} />
+  ));
+
+  return (
+    <div className="c-paper__block">
+      <p className="c-paper__lead">{section.title}:</p>
+      {section.pdf_layout === "inline" ? (
+        <div className="c-paper__plain">{lines}</div>
+      ) : (
+        <div className="c-paper__stack">
+          {section.pdf_layout === "overnight" ? (
+            lines.length > 0 && <div className="c-paper__cell">{lines}</div>
+          ) : (
+            simple.map((field, index) => (
+              <div key={field.key} className="c-paper__cell">
+                {lines[index]}
+              </div>
+            ))
+          )}
+          {repeaters.map((field) => (
+            <div key={field.key} className="c-paper__cell">
+              <Attendances field={field} record={record} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -71,54 +140,28 @@ export function PaperRecord({
     <div className="c-paper">
       <p className="c-paper__title">{schema.title}</p>
 
-      <table>
-        <tbody>
-          <tr>
-            <th>Participant</th>
-            <td>{record.participant_name}</td>
-          </tr>
-          <tr>
-            <th>Date</th>
-            <td>{longDate(record.service_date)}</td>
-          </tr>
-          <tr>
-            <th>Name of staff on shift</th>
-            <td>{record.submitted_by_name ?? record.created_by_name}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="c-paper__stack">
+        <div className="c-paper__cell">
+          <strong>Participant:</strong>{" "}
+          <span className="c-paper__ink">{record.participant_name}</span>
+        </div>
+        <div className="c-paper__cell">
+          <strong>Date:</strong>{" "}
+          <span className="c-paper__ink">{longDate(record.service_date)}</span>
+        </div>
+        <div className="c-paper__cell">
+          <strong>Name of staff on shift:</strong>{" "}
+          <span className="c-paper__ink">{record.submitted_by_name ?? record.created_by_name}</span>
+        </div>
+      </div>
 
       {sections.map((section) => (
-        <div key={section.key}>
-          <h4>{section.title}</h4>
-          <SectionAnswers fields={section.fields} answers={record.answers} />
-        </div>
+        <Section key={section.key} section={section} record={record} />
       ))}
 
-      {!preview && record.attendances.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: "22%" }}>Time</th>
-              <th style={{ width: "56%" }}>Purpose</th>
-              <th>Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {record.attendances.map((row, index) => (
-              <tr key={index}>
-                <td>{timeText(row.time)}</td>
-                <td>{row.purpose}</td>
-                <td>{row.duration_minutes} min</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
       {!preview && attached.length > 0 && (
-        <div>
-          <h4>Attached forms</h4>
+        <div className="c-paper__block">
+          <p className="c-paper__lead">Attached charts:</p>
           {attached.map((item) => (
             <p key={item.id} className="c-paper__line">
               <strong>{item.label}</strong>
@@ -127,6 +170,8 @@ export function PaperRecord({
           ))}
         </div>
       )}
+
+      {!preview && schema.footer_note && <p className="c-paper__footnote">{schema.footer_note}</p>}
 
       {preview && (
         <p className="c-paper__note">

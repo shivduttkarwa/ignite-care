@@ -232,6 +232,12 @@ and download. Forms save as the worker types, so a closed tab or a dropped
 connection loses nothing. On the Records screen a manager can tick rows to
 export just those, or open a record in a side drawer without leaving the list.
 
+Both forms are transcriptions of Ignite's own Word originals, down to the
+wording, the section order and the printed layout: the Daily Care Needs Record
+prints as the same single-column sheet, and the Seizure Observation Chart as the
+same seven-column grid with its shaded headings, red duration row and observer
+sign-off. Managers read the output the way they read the folder.
+
 The logo is the real Ignite lockup, keyed off its white background from the
 brand JPG and served as WebP, with PNG app icons generated from the flame mark.
 

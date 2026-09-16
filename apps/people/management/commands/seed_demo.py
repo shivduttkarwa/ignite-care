@@ -130,6 +130,13 @@ AWAKE = [
     "Awake briefly at 4am, resettled quickly",
 ]
 
+FOLLOW_UPS = [
+    "GP review due for the rash on his back - booked for Thursday, please confirm in Caremaster.",
+    "Running low on thickener, two sachets left. Ordered, follow up if it has not arrived.",
+    "Family asked for a call back about the weekend outing.",
+    "Left shoe rubbing, chiropodist referral raised with the coordinator.",
+]
+
 SEIZURES = [
     {
         "awareness": ["confused"],
@@ -339,6 +346,7 @@ class Command(BaseCommand):
                         "sleep_from": "23:00",
                         "sleep_to": "05:30",
                         "awake_notes": random.choice(AWAKE) if shift == Shift.NIGHT else "",
+                        "follow_up": random.choice(FOLLOW_UPS) if random.random() < 0.2 else "",
                     }
                     if not answers["shower"] and not answers["bed_bath"]:
                         answers["no_wash_reason"] = "Declined, offered again in the morning."

@@ -164,6 +164,7 @@ export type SchemaField = {
   error?: string;
   required?: boolean;
   required_when_shown?: boolean;
+  required_if?: ShowIf;
   show_if?: ShowIf;
   promote?: string;
   group?: string;
@@ -182,6 +183,7 @@ export type SchemaField = {
 export type SchemaSection = {
   key: string;
   title: string;
+  pdf_layout?: "inline" | "table" | "overnight";
   fields: SchemaField[];
 };
 

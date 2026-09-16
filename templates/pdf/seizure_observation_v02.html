@@ -1,30 +1,60 @@
 <section class="chart">
-  {% include "pdf/_brand.html" %}
-  <h1 class="chart__title" style="bookmark-label: '{{ page.schema.pdf_label }}'">{{ page.schema.title }}</h1>
+  <div class="footer">
+    <span class="footer__ref">{{ record.reference }}</span>
+    {{ page.schema.document_ref }}
+    <span class="footer__notice">{{ page.schema.notice }}</span>
+  </div>
+
+  <div class="chart__head">
+    <h1 class="chart__title" style="bookmark-label: '{{ page.schema.pdf_label }}'">{{ page.schema.title|upper }}</h1>
+    <img class="chart__logo" src="frontend/public/logo-full.webp" alt="Ignite Community Services">
+  </div>
+
+  <div class="chart__meta">
+    <p class="chart__name">NAME: <span class="chart__rule">{{ page.name }}</span></p>
+    <p class="chart__how">Instructions: Use Column 1 to identify each event.<br>Check off data where applicable.</p>
+  </div>
+
   <table class="grid">
     <colgroup>
       <col class="grid__labelcol">
-      {% for cell in page.rows.0.cells %}<col>{% endfor %}
+      {% for column in page.columns %}<col>{% endfor %}
     </colgroup>
     <thead>
-    {% for row in page.rows %}{% if row.kind == "key" %}
-      <tr class="grid__key">
-        <th>{{ row.label }}</th>
-        {% for cell in row.cells %}<td{% if cell.strong %} class="is-strong"{% endif %}>{{ cell.text }}</td>{% endfor %}
+      <tr>
+        <th class="grid__symptoms" rowspan="2">SYMPTOMS OF SEIZURE:<span class="grid__start">{{ page.schema.instruction }}</span></th>
+        {% for column in page.columns %}<th class="grid__datehead">DATE</th>{% endfor %}
       </tr>
-    {% endif %}{% endfor %}
+      <tr>
+        {% for cell in page.dates %}<td class="grid__date">{{ cell.text }}</td>{% endfor %}
+      </tr>
     </thead>
     <tbody>
-    {% for row in page.rows %}
-      {% if row.kind == "heading" %}
-      <tr class="grid__heading"><th colspan="{{ page.span }}">{{ row.label }}</th></tr>
-      {% elif row.kind == "row" %}
-      <tr>
-        <th{% if row.label_strong %} class="is-strong"{% endif %}>{{ row.label }}</th>
-        {% for cell in row.cells %}<td class="{% if cell.strong %}is-strong{% endif %}{% if cell.muted %} is-muted{% endif %}{% if cell.signature %} is-signature{% endif %}">{% if cell.image %}<img src="{{ cell.image }}" alt="Signature">{% else %}{{ cell.text }}{% endif %}</td>{% endfor %}
-      </tr>
-      {% endif %}
-    {% endfor %}
+      {% for row in page.rows %}
+        {% if row.kind == "bar" %}
+          <tr class="grid__bar"><td colspan="{{ page.span }}"></td></tr>
+        {% elif row.kind == "heading" %}
+          <tr class="grid__heading{% if row.tone %} grid__heading--{{ row.tone }}{% endif %}">
+            <th>{{ row.label }}</th>
+            {% for cell in row.cells %}<td>{{ cell.text }}</td>{% endfor %}
+          </tr>
+        {% elif row.kind == "signoff" %}
+          <tr class="grid__signoff">
+            <th>{% for line in row.labels %}<span>{{ line }}</span>{% endfor %}</th>
+            {% for cell in row.cells %}
+              <td>
+                <span class="grid__who">{{ cell.name }}</span>
+                <span class="grid__sign">{% if cell.image %}<img src="{{ cell.image }}" alt="Signature">{% else %}{{ cell.typed }}{% endif %}</span>
+              </td>
+            {% endfor %}
+          </tr>
+        {% else %}
+          <tr{% if row.shaded %} class="grid__heading"{% endif %}>
+            <th>{{ row.label }}</th>
+            {% for cell in row.cells %}<td class="{% if cell.strong %}is-strong{% endif %}{% if cell.muted %} is-muted{% endif %}">{% if cell.image %}<img src="{{ cell.image }}" alt="Signature">{% else %}{{ cell.text }}{% if cell.detail %}<span class="grid__detail">{{ cell.detail }}</span>{% endif %}{% endif %}</td>{% endfor %}
+          </tr>
+        {% endif %}
+      {% endfor %}
     </tbody>
   </table>
 </section>

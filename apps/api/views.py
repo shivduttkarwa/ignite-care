@@ -787,9 +787,9 @@ def attachment_create(request, pk):
 
     try:
         with transaction.atomic():
-            last = record.attachments.filter(schema_key=schema["key"]).aggregate(
-                Max("position")
-            )["position__max"]
+            last = record.attachments.filter(schema_key=schema["key"]).aggregate(Max("position"))[
+                "position__max"
+            ]
             attachment = AttachedForm.objects.create(
                 record=record,
                 schema_key=schema["key"],
