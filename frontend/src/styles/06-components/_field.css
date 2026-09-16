@@ -76,7 +76,7 @@
 .c-field--invalid .c-input:focus-visible,
 .c-field--invalid .c-textarea:focus-visible {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  box-shadow: 0 0 0 1px var(--color-accent);
 }
 
 .c-field--invalid .c-input,
