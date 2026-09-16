@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import environ
+from django.templatetags.static import static
+from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -12,6 +14,10 @@ DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.simple_history",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -97,6 +103,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
@@ -148,3 +155,92 @@ REST_FRAMEWORK = {
 # Same origin in production, so no cross-origin requests are allowed by default.
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CORS_ALLOW_CREDENTIALS = True
+
+# Django admin ---------------------------------------------------------------
+# The admin is where participants, staff, homes and notices are maintained
+# until the portal grows its own screens for them, so it carries the brand.
+UNFOLD = {
+    "SITE_TITLE": "Ignite portal",
+    "SITE_HEADER": "Ignite Community Services",
+    "SITE_SUBHEADER": "Support worker portal administration",
+    "SITE_URL": "/",
+    "SITE_ICON": lambda request: static("ignite/logo-mark.webp"),
+    "SITE_LOGO": lambda request: static("ignite/logo-full.webp"),
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "STYLES": [lambda request: static("ignite/admin.css")],
+    "DASHBOARD_CALLBACK": "config.admin_dashboard.cards",
+    "COLORS": {
+        "primary": {
+            "50": "#f2f8fa",
+            "100": "#e3eff3",
+            "200": "#c7dfe7",
+            "300": "#9dc7d5",
+            "400": "#5ea2b8",
+            "500": "#2b87a6",
+            "600": "#1a7695",
+            "700": "#115e74",
+            "800": "#0d4b5e",
+            "900": "#08303d",
+            "950": "#062430",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "People",
+                "items": [
+                    {
+                        "title": "Participants",
+                        "icon": "groups",
+                        "link": reverse_lazy("admin:people_participant_changelist"),
+                    },
+                    {
+                        "title": "Staff accounts",
+                        "icon": "badge",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": "Condition tags",
+                        "icon": "label",
+                        "link": reverse_lazy("admin:people_conditiontag_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Service",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Properties",
+                        "icon": "home_work",
+                        "link": reverse_lazy("admin:people_home_changelist"),
+                    },
+                    {
+                        "title": "Notices",
+                        "icon": "campaign",
+                        "link": reverse_lazy("admin:notices_notice_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Records, read only",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Care records",
+                        "icon": "description",
+                        "link": reverse_lazy("admin:records_carerecord_changelist"),
+                    },
+                    {
+                        "title": "Audit log",
+                        "icon": "history",
+                        "link": reverse_lazy("admin:records_auditevent_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+}

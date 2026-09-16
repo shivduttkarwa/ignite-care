@@ -1,38 +1,41 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from simple_history.admin import SimpleHistoryAdmin
+from unfold.admin import ModelAdmin, StackedInline
+from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from .models import ConditionTag, Home, Participant, StaffProfile
 
 User = get_user_model()
 
-admin.site.site_header = "Ignite portal administration"
-admin.site.site_title = "Ignite portal"
-admin.site.index_title = "People, homes and records"
-
 
 @admin.register(Home)
-class HomeAdmin(admin.ModelAdmin):
+class HomeAdmin(ModelAdmin):
     list_display = ("name", "short_name", "position", "is_active")
     list_editable = ("position", "is_active")
     search_fields = ("name", "short_name")
+    warn_unsaved_form = True
 
 
 @admin.register(ConditionTag)
-class ConditionTagAdmin(admin.ModelAdmin):
+class ConditionTagAdmin(ModelAdmin):
     list_display = ("label", "tone", "position")
     list_editable = ("tone", "position")
     search_fields = ("label",)
+    warn_unsaved_form = True
 
 
 @admin.register(Participant)
-class ParticipantAdmin(SimpleHistoryAdmin):
+class ParticipantAdmin(SimpleHistoryAdmin, ModelAdmin):
     list_display = ("full_name", "home", "room", "is_active")
     list_filter = ("home", "is_active", "tags")
+    list_filter_submit = True
     list_select_related = ("home",)
     search_fields = ("first_name", "last_name", "preferred_name", "room")
     filter_horizontal = ("tags",)
+    warn_unsaved_form = True
     fieldsets = (
         (
             None,
@@ -47,21 +50,28 @@ class ParticipantAdmin(SimpleHistoryAdmin):
     )
 
 
-class StaffProfileInline(admin.StackedInline):
+class StaffProfileInline(StackedInline):
     model = StaffProfile
     can_delete = False
     filter_horizontal = ("homes",)
     fields = ("role", "homes", "phone", "is_active")
+    tab = True
 
 
+# Access is decided by StaffProfile.role, so Django groups are only noise here.
+admin.site.unregister(Group)
 admin.site.unregister(User)
 
 
 @admin.register(User)
-class StaffUserAdmin(UserAdmin):
+class StaffUserAdmin(UserAdmin, ModelAdmin):
+    form = UserChangeForm
+    add_form = UserCreationForm
+    change_password_form = AdminPasswordChangeForm
     inlines = (StaffProfileInline,)
     list_display = ("username", "first_name", "last_name", "role", "is_active", "is_superuser")
     list_select_related = ("staff_profile",)
+    warn_unsaved_form = True
 
     @admin.display(description="Role")
     def role(self, user):

@@ -18,6 +18,7 @@ dependencies = [
     "pypdf>=6.0",
     "openpyxl>=3.1",
     "whitenoise>=6.9",
+    "django-unfold>=0.106.1",
 ]
 
 [dependency-groups]

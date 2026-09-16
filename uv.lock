@@ -234,6 +234,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-unfold"
+version = "0.106.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/70/64/d6786a90e3c3892b329e738266eacf19abde9ad404fa36fc2a78371749de/django_unfold-0.106.1.tar.gz", hash = "sha256:1ecbadd9e73c0d4b4b304b1d14fb7bea6fa251de1645fa0ae1cdeae583b7be1e", size = 1112437, upload-time = "2026-09-14T11:53:23.226Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/e8/6102067725815e712f0be34aa2718182404d4bea6fa53d3a7fb207735c9d/django_unfold-0.106.1-py3-none-any.whl", hash = "sha256:aaabf6b66571d84b945393fdf24c934bd47e8f1118f3b797ab799e01d35b381f", size = 1237857, upload-time = "2026-09-14T11:53:21.852Z" },
+]
+
+[[package]]
 name = "djangorestframework"
 version = "3.18.1"
 source = { registry = "https://pypi.org/simple" }
@@ -330,6 +342,7 @@ dependencies = [
     { name = "django-filter" },
     { name = "django-otp" },
     { name = "django-simple-history" },
+    { name = "django-unfold" },
     { name = "djangorestframework" },
     { name = "openpyxl" },
     { name = "pypdf" },
@@ -362,6 +375,7 @@ requires-dist = [
     { name = "django-filter", specifier = ">=25.1" },
     { name = "django-otp", specifier = ">=1.6" },
     { name = "django-simple-history", specifier = ">=3.10" },
+    { name = "django-unfold", specifier = ">=0.106.1" },
     { name = "djangorestframework", specifier = ">=3.16" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "pypdf", specifier = ">=6.0" },

@@ -37,6 +37,38 @@ def test_the_admin_opens_for_a_superuser(client, db, daniel, worker):
     )
 
 
+def test_a_participant_can_be_edited_from_the_admin(client, db, daniel):
+    """The admin is where participants are maintained, so saving must work end to end."""
+    admin_user = get_user_model().objects.create_superuser(
+        "editor", "editor@ignite.test", "portal-testing-2026"
+    )
+    client.force_login(admin_user)
+
+    response = client.post(
+        reverse("admin:people_participant_change", args=[daniel.pk]),
+        {
+            "first_name": "Daniel",
+            "last_name": "Reeves",
+            "preferred_name": "Danny",
+            "date_of_birth": "15/08/1992",
+            "is_active": "on",
+            "home": daniel.home_id,
+            "room": "Room 2",
+            "tags": [],
+            "shift_alert": "Do not leave unattended near stairs",
+            "allergies": "Penicillin",
+            "mobility": "",
+            "communication": "",
+            "emergency_contacts": "",
+        },
+    )
+
+    assert response.status_code == 302, "the change form should save, not come back with errors"
+    daniel.refresh_from_db()
+    assert daniel.date_of_birth == dt.date(1992, 8, 15)
+    assert daniel.shift_alert == "Do not leave unattended near stairs"
+
+
 def test_previewing_a_pdf_is_audited_as_a_view(client, db, daniel, worker):
     record = make_record(daniel, worker, dt.date(2026, 8, 12))
     client.force_login(worker)

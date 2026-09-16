@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+
+{% load i18n unfold %}
+
+{% block title %}{{ title }} | {{ site_title }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="ignite-cards">
+        {% for card in ignite_cards %}
+            {% component "unfold/components/card.html" %}
+                {% component "unfold/components/text.html" %}{{ card.label }}{% endcomponent %}
+                {% component "unfold/components/title.html" %}{{ card.value }}{% endcomponent %}
+                {% component "unfold/components/text.html" %}{{ card.hint }}{% endcomponent %}
+            {% endcomponent %}
+        {% endfor %}
+    </div>
+
+    {% include "unfold/helpers/dashboard_default.html" %}
+{% endblock %}
